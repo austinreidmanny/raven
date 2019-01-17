@@ -36,7 +36,7 @@ fi
 
 export SAMPLES="${1}-${!#}"
 export HOME_DIR=`pwd`
-export WORKING_DIR="/n/scratch2/am702/nibert/${PROJECT}/"
+export WORKING_DIR="/n/scratch2/am704/nibert/${PROJECT}/"
 export TEMP_DIR="/n/scratch2/am704/tmp/${PROJECT}/${SAMPLES}/"
 export FINAL_DIR="/n/data1/hms/mbib/nibert/austin/${PROJECT}/"
 export DIAMOND_DB_DIR="/n/data1/hms/mbib/nibert/diamond/nr"
