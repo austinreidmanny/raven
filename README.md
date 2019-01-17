@@ -1,6 +1,4 @@
-# Master Pipeline
-
-2019-01-15
+# dnatax
 
 ## Pipeline description
 Right now, I am using basically the same pipeline across multiple projects. 
@@ -12,7 +10,7 @@ The steps are:
 - Extract relevant sequences [seqtk]
 - Refinement [manual using SRA-BLAST]
 
-The last two steps are performed manually.
+The last step is performed manually.
 
 ## Usage
 

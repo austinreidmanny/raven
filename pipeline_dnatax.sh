@@ -7,55 +7,92 @@
 #SBATCH -o logs/slurm-%j.log
 #SBATCH -e logs/slurm-%j.err
 
-# Set up the environment
+# SETUP THE COMPUTATIONAL ENVIRONMENT
+
+# Load required programs
 module load gcc/6.2.0
 module load python/3.6.0
-module load bwa
-module load samtools
+# note: also requires Diamond, rnaSPAdes, and seqtk
+
+# Load my Python environment
 source ~/py3/bin/activate
 
+####################################
+# Enter project name [REQUIRED]
+export PROJECT=""
+#####################################
 
-#####################################################
-# ENTER PROJECT NAME                                #
-#                                                   #
-# (this is the only parameter that needs to change) #
-#                                                   #
-export PROJECT=""     
-#####################################################
+# Check to make sure project name is given above; if not, exit with error code 1
+if [ -z "${PROJECT}" ]
+  then echo "No PROJECT name given."
+  echo "Please edit this parameter at top of the pipeline script"
+  exit 1
+fi
 
+# Setup workspace directory structure (PROJECT/data analysis scripts)
+##   Will run all the analysis in scratch space (maximum read/write speed)
+##   Will allocate specific temp space that is deleted at end of job
+##   Will save final results in a permanent space
 
-# CHECK TO MAKE SURE A SAMPLE_NAME IS GIVEN. IF NOT, EXIT
+export SAMPLES="${1}-${!#}"
+export HOME_DIR=`pwd`
+export WORKING_DIR="/n/scratch2/am702/nibert/${PROJECT}/"
+export TEMP_DIR="/n/scratch2/am704/tmp/${PROJECT}/${SAMPLES}/"
+export FINAL_DIR="/n/data1/hms/mbib/nibert/austin/${PROJECT}/"
+export DIAMOND_DB_DIR="/n/data1/hms/mbib/nibert/diamond/nr"
+
+mkdir -p ${WORKING_DIR}
+mkdir -p ${TEMP_DIR}
+mkdir -p ${FINAL_DIR}
+
+# Change to the working directory
+cd ${WORKING_DIR}
+
+# Setup data subdirectory
+mkdir -p data/contigs
+mkdir -p data/raw-sra
+
+# Setup analysis subdirectory
+mkdir -p analysis/timelogs
+mkdir -p analysis/contigs
+mkdir -p analysis/diamond
+mkdir -p analysis/taxonomy
+mkdir -p analysis/viruses
+
+# Setup scripts subdirecotry
+mkdir -p scripts
+
+# Copy key scripts (taxonomy and yaml-config-builders) from HOME to WORKING dir
+cp ${HOME_DIR}/diamondToTaxonomy.py scripts/
+cp ${HOME_DIR}/yaml_spades_pairedreads.sh scripts/
+cp ${HOME_DIR}/yaml_spades_singlereads.sh scripts/
+
+# Check to make sure samples are given, in the form of 1+ SRA accession(s)
+# If not, exit with error code 2
 if [ -z "$1" ]
 	then echo "No project/sample name is given."
         echo "Must specify one or more samples"
 	echo "Usage: ./pipeline.sh SRX000001 [SRX00002] [SRX00003] [...]"
 	echo "Exiting."
-	exit 1
+	exit 2
 fi
 
 # output exact command into the slurm log
 echo $0 ${@}
 cat $0
 
-# Make directory to save the results in
-mkdir -p /n/scratch2/am704/nibert/${PROJECT}/sra
-mkdir -p /n/scratch2/am704/nibert/${PROJECT}/${1}-${!#}
-cd /n/scratch2/am704/nibert/${PROJECT}/${1}-${!#}
+# WITH THE COMPUTATIONAL ENVIRONMENT SET UP, BEGIN THE ANALYSIS
 
-# Create directories needed for later analysis
-mkdir -p /tmp/am704/${1}-${!#}
-mkdir -p /n/scratch2/am704/tmp/${1}-${!#}
-
-# Initialize log file
-echo "Downloading the file at:" > ${1}-${!#}.pipeline.log
-date >> ${1}-${!#}.pipeline.log
+# Initialize timelog file
+echo "Downloading input FASTQs from the SRA at:" > analysis/timelogs/${SAMPLES}.log
+date >> ${SAMPLES}.log
 
 # Download fastq files from the SRA
 for SAMPLE in ${@}
    do \
-      fasterq-dump --split-3 -t /tmp/am704/${1}-${!#} -p \
+      fasterq-dump --split-3 -t ${TEMP_DIR} -p \
       -e 6 --skip-technical --rowid-as-name --mem=50GB \
-      --outdir /n/scratch2/am704/nibert/${PROJECT}/sra/ \
+      --outdir data/raw-sra \
       ${SAMPLE}
    done
 
@@ -63,25 +100,18 @@ for SAMPLE in ${@}
 # (this is after fasterq-dump because 'existing files' counts as a fail)
 set -euo pipefail
 
-# Add QC step to log
-#echo "Began quality control/trimming step at:" >> ${1}-${!#}.pipeline.log
-#date >> ${1}-${!#}.pipeline.log
-
 # rnaSPAdes log info
-echo "Began rnaSPAdes at" >> ${1}-${!#}.pipeline.log
-date >> ${1}-${!#}.pipeline.log
-
-# Create directories needed for rnaSPAdes
-mkdir -p rnaspades/
+echo "Began contig assembly at" >> analysis/timelogs/${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
 
 # Determine if single reads or paired-end reads for rnaSPAdes contig file
 PAIRED=0
 SINGLE=0
 for SAMPLE in ${@}
-   do if [ -f /n/scratch2/am704/nibert/${PROJECT}/sra/${SAMPLE}.fastq ]
+   do if [ -f data/raw-sra/${SAMPLE}.fastq ]
       then let "SINGLE += 1"
-   elif [ -f /n/scratch2/am704/nibert/${PROJECT}/sra/${SAMPLE}_1.fastq ] && \
-        [ -f /n/scratch2/am704/nibert/${PROJECT}/sra/${SAMPLE}_2.fastq ]
+   elif [ -f data/raw-sra/${SAMPLE}_1.fastq ] && \
+        [ -f data/raw-sra/${SAMPLE}_2.fastq ]
       then let "PAIRED += 1"
    else
       echo "ERROR: cannot determine if input libraries are paired-end or single-end"
@@ -91,10 +121,10 @@ for SAMPLE in ${@}
 # Construct YAML input file for rnaSPAdes
 if [ ${PAIRED} > 0 ] && \
    [ ${SINGLE} = 0 ]
-   then ~/nibert/${PROJECT}/yaml_spades_pairedreads.sh ${@}
+   then scripts/yaml_spades_pairedreads.sh ${@}
 elif [ ${SINGLE} > 0 ] && \
      [ ${PAIRED} = 0 ]
-   then ~/nibert/${PROJECT}/yaml_spades_singlereads.sh ${@}
+   then scripts/yaml_spades_singlereads.sh ${@}
 else
    echo "ERROR: could not build YAML configuration file for rnaSPAdes"
    echo "Possibly mixed input libraries: both single and paired end reads"
@@ -105,42 +135,70 @@ fi
 rnaspades.py \
 --threads 6 \
 -m 50 \
---tmp-dir /tmp/am704/${1}-${!#} \
---dataset rnaspades/input.yaml \
--o /n/scratch2/am704/tmp/${1}-${!#}/
+--tmp-dir ${TEMP_DIR} \
+--dataset scripts/${SAMPLES}.input.yaml \
+-o ${TEMP_DIR}
 
-# Copy the results files from the tmp directory to the final permament directory
-cp /n/scratch2/am704/tmp/${1}-${!#}/transcripts.fasta rnaspades/${1}-${!#}.contigs.fasta
-cp /n/scratch2/am704/tmp/${1}-${!#}/transcripts.paths rnaspades/${1}-${!#}.contigs.paths
-cp /n/scratch2/am704/tmp/${1}-${!#}/spades.log rnaspades/${1}-${!#}.rnaspades.log
+# Copy the results files from the temp directory to the working directory
+cp ${TEMP_DIR}/transcripts.fasta data/contigs/${SAMPLES}.contigs.fasta
+cp ${TEMP_DIR}/transcripts.paths analysis/contigs/${SAMPLES}.contigs.paths
+cp ${TEMP_DIR}/spades.log analysis/contigs/${SAMPLES}.contigs.log
 
 # rnaSPAdes log info
-echo "Finished rnaspades at:" >> ${1}-${!#}.pipeline.log
-date >> ${1}-${!#}.pipeline.log
+echo "Finished contig assembly at:" >> analysis/timelogs/${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
 
-# Do classification of the contigs with Kraken
+# diamond log info
+echo "Began taxonomic classification at:" >> analysis/timelogs/${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
+
+# Do classification of the contigs with Diamond
 mkdir -p diamond
 diamond \
 blastx \
 --verbose \
 --more-sensitive \
 --threads 6 \
---db /n/data1/hms/mbib/nibert/austin/diamond/nr \
---query rnaspades/${1}-${!#}.contigs.fasta \
---out diamond/${1}-${!#}.nr.diamond.txt \
+--db ${DIAMOND_DB_DIR} \
+--query data/contigs/${SAMPLES}.contigs.fasta \
+--out analysis/diamond/${SAMPLES}.nr.diamond.txt \
 --outfmt 102 \
 --max-hsps 1 \
 --top 1 \
---tmpdir /tmp/am704/${1}-${!#}
+--tmpdir ${TEMP_DIR}
 
-# Taxonomy analysis
-cd diamond/
-~/nibert/scripts/taxonomy/diamondToTaxonomy.py ${1}-${!#}.nr.diamond.txt
-cd ../
+# diamond log info
+echo "Finished taxonomic classification:" >> analysis/timelogs/${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
+
+# taxonomy log info
+echo "Beginning taxonomy conversion:" >> analysis/timelogs/${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
+
+# Convert taxon IDs to full taxonomy strings
+cd analysis/diamond/
+../../scripts/diamondToTaxonomy.py ${SAMPLES}.nr.diamond.txt
+mv ${SAMPLES}.nr.diamond.taxonomy.txt ../taxonomy/
+cd ../../
+
+# viral sequences log info
+echo "Beginning taxonomy conversion:" >> analysis/timelogs/${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
+
+# Extract viral sequences and save them to a new file
+grep Viruses analysis/taxonomy/${SAMPLES}.nr.diamond.taxonomy.txt | \
+cut -f 1 | \
+seqtk subseq data/contigs/${SAMPLES}.contigs.fasta - > \
+analysis/viruses/${SAMPLES}.viruses.fasta
+
+# Print number of viral sequences 
+echo "Number of viral contigs in ${SAMPLES}:"
+grep "^>" analysis/viruses/${SAMPLES}.viruses.fasta | \
+wc -l 
 
 # Create a small token to indicate it finished correctly
-echo "Finished entire pipeline for ${1}-${!#}" > completed.pipeline
+echo "Finished entire pipeline for ${SAMPLES}" > completed.pipeline
 
-# Copy results to permanent /data1/ directory
-cp -Rp /n/scratch2/am704/nibert/${PROJECT}/${1}-${!#} /n/data1/hms/mbib/nibert/austin/${PROJECT}/
+# Copy results to final, permanent directory
+rsync -az ${WORKING_DIR}/ ${FINAL_DIR}/  
 
