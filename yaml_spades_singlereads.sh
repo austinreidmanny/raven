@@ -13,9 +13,7 @@ echo '    [
 for SAMPLE in ${FILES}
    do
       echo -n \
-      '          "/n/scratch2/am704/nibert/' >> ${OUTPUT}
-      echo \
-      ${PROJECT}/sra/${SAMPLE}.fastq\", >> ${OUTPUT}
+      '          "data/raw-sra/${SAMPLE}.fastq",/' >> ${OUTPUT}
    done
 
 # Remove the last comma
@@ -29,4 +27,4 @@ echo \
      ]' >> ${OUTPUT}
 
 # Completion
-echo "Finished contructing single-read input yaml for ${1}-${!#}"
+echo "Finished contructing single-read input yaml for ${SAMPLES}"

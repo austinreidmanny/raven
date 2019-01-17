@@ -14,9 +14,9 @@ echo '    [
 for SAMPLE in ${FILES}
    do
       echo -n \
-      '          "/n/scratch2/am704/nibert/' >> ${OUTPUT}
+      '          "../data/raw-sra/' >> ${OUTPUT}
       echo \
-      ${PROJECT}/sra/${SAMPLE}_1.fastq\", >> ${OUTPUT}
+      ${SAMPLE}_1.fastq\", >> ${OUTPUT}
    done
 
 # Remove the last comma
@@ -32,9 +32,9 @@ echo \
 for SAMPLE in ${FILES}
    do   
       echo -n \
-      '          "/n/scratch2/am704/nibert/' >> ${OUTPUT}
+      '          "../data/raw-sra/' >> ${OUTPUT}
       echo \
-      ${PROJECT}/sra/${SAMPLE}_2.fastq\", >> ${OUTPUT}
+      ${SAMPLE}_2.fastq\", >> ${OUTPUT}
    done
 
 # Remove the last comma
@@ -47,4 +47,5 @@ echo \
       },
      ]' >> ${OUTPUT}
 
-echo "Finished contructing input yaml for ${1}-${!#}"
+echo "Finished contructing input yaml for ${SAMPLES}"
+
