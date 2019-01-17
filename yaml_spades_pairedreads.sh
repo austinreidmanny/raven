@@ -1,6 +1,6 @@
 #!/bin/bash
 
-OUTPUT="./${SAMPLES}.input.yaml"
+OUTPUT="scripts/${SAMPLES}.input.yaml"
 FILES=${@}
 
 # Write beginning of the file
