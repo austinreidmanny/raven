@@ -11,11 +11,12 @@
 
 # Load required programs
 module load gcc/6.2.0
-module load python/3.6.0
+module load python/2.7.12
+module load trimgalore
 # note: also requires Diamond, rnaSPAdes, and seqtk
 
 # Load my Python environment
-source ~/py3/bin/activate
+#source ~/py3/bin/activate
 
 ####################################
 # Enter project name [REQUIRED]
@@ -51,6 +52,7 @@ cd ${WORKING_DIR}
 # Setup data subdirectory
 mkdir -p data/contigs
 mkdir -p data/raw-sra
+mkdir -p data/fastq-adapter-trimmed
 
 # Setup analysis subdirectory
 mkdir -p analysis/timelogs
@@ -85,7 +87,7 @@ cat $0
 
 # Initialize timelog file
 echo "Downloading input FASTQs from the SRA at:" > analysis/timelogs/${SAMPLES}.log
-date >> ${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
 
 # Download fastq files from the SRA
 for SAMPLE in ${@}
@@ -100,11 +102,7 @@ for SAMPLE in ${@}
 # (this is after fasterq-dump because 'existing files' counts as a fail)
 set -euo pipefail
 
-# rnaSPAdes log info
-echo "Began contig assembly at" >> analysis/timelogs/${SAMPLES}.log
-date >> analysis/timelogs/${SAMPLES}.log
-
-# Determine if single reads or paired-end reads for rnaSPAdes contig file
+# Determine if single reads or paired-end reads for downstream processing
 PAIRED=0
 SINGLE=0
 for SAMPLE in ${@}
@@ -117,6 +115,53 @@ for SAMPLE in ${@}
       echo "ERROR: cannot determine if input libraries are paired-end or single-end"
       exit
    fi; done
+
+# Adapter trimming log info
+echo "Began adapter trimming at" >> analysis/timelogs/${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
+
+# Trim adapters from raw SRA files
+## Run TrimGalore! in paired-end mode
+if [ ${PAIRED} > 0 ] && \
+   [ ${SINGLE} = 0 ]
+   then for SAMPLE in ${@}
+            do trim_galore \
+               --paired \
+               --stringency 5 \
+               --quality 1
+               -o data/fastq-adapter-trimmed \
+               data/raw-sra/${SAMPLE}_1.fastq \
+               data/raw-sra/${SAMPLE}_2.fastq
+            done
+
+## Run TrimGalore! in single/unpaired-end mode
+elif [ ${SINGLE} > 0 ] && \
+     [ ${PAIRED} = 0 ]
+     then for SAMPLE in ${@}
+               do trim_galore \
+                  --stringency 5 \
+                  --quality 1
+                  -o data/fastq-adapter-trimmed \
+                  data/raw-sra/${SAMPLE}.fastq
+               done
+
+else
+   echo "ERROR: could not determine library type"
+   echo "Possibly mixed input libraries: both single and paired end reads"
+   exit 3
+fi
+
+# Adapter trimming log info
+echo "Finished adapter trimming at" >> analysis/timelogs/${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
+
+# Load Python3 for downstream steps
+module load python/3.6.0
+source ~/py3/bin/activate
+
+# rnaSPAdes log info
+echo "Began contig assembly at" >> analysis/timelogs/${SAMPLES}.log
+date >> analysis/timelogs/${SAMPLES}.log
 
 # Construct YAML input file for rnaSPAdes
 if [ ${PAIRED} > 0 ] && \

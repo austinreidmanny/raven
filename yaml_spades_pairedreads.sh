@@ -14,9 +14,9 @@ echo '    [
 for SAMPLE in ${FILES}
    do
       echo -n \
-      '          "../data/raw-sra/' >> ${OUTPUT}
+      '          "../data/fastq-adapter-trimmed/' >> ${OUTPUT}
       echo \
-      ${SAMPLE}_1.fastq\", >> ${OUTPUT}
+      ${SAMPLE}_1_trimmed.fq\", >> ${OUTPUT}
    done
 
 # Remove the last comma
@@ -32,9 +32,9 @@ echo \
 for SAMPLE in ${FILES}
    do   
       echo -n \
-      '          "../data/raw-sra/' >> ${OUTPUT}
+      '          "../data/fastq-adapter-trimmed/' >> ${OUTPUT}
       echo \
-      ${SAMPLE}_2.fastq\", >> ${OUTPUT}
+      ${SAMPLE}_2_trimmed.fq\", >> ${OUTPUT}
    done
 
 # Remove the last comma

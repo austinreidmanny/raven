@@ -13,9 +13,11 @@ echo '    [
 for SAMPLE in ${FILES}
    do
       echo -n \
-      '          "data/raw-sra/${SAMPLE}.fastq",/' >> ${OUTPUT}
+      '          "../data/fastq-adapter-trimmed/' >> ${OUTPUT}
+      echo \
+      ${SAMPLE}_trimmed.fq\", >> ${OUTPUT}
    done
-
+   
 # Remove the last comma
 sed '$ s/.$//' ${OUTPUT} > ${OUTPUT}.temp
 mv ${OUTPUT}.temp ${OUTPUT}
