@@ -15,9 +15,6 @@ module load python/2.7.12
 module load trimgalore
 # note: also requires Diamond, rnaSPAdes, and seqtk
 
-# Load my Python environment
-#source ~/py3/bin/activate
-
 ####################################
 # Enter project name [REQUIRED]
 export PROJECT=""
@@ -40,7 +37,7 @@ export HOME_DIR=`pwd`
 export WORKING_DIR="/n/scratch2/am704/nibert/${PROJECT}/"
 export TEMP_DIR="/n/scratch2/am704/tmp/${PROJECT}/${SAMPLES}/"
 export FINAL_DIR="/n/data1/hms/mbib/nibert/austin/${PROJECT}/"
-export DIAMOND_DB_DIR="/n/data1/hms/mbib/nibert/diamond/nr"
+export DIAMOND_DB_DIR="/n/data1/hms/mbib/nibert/austin/diamond/nr"
 
 mkdir -p ${WORKING_DIR}
 mkdir -p ${TEMP_DIR}
@@ -99,7 +96,7 @@ for SAMPLE in ${@}
    done
 
 # If any errors are encountered, stop the pipeline
-# (this is after fasterq-dump because 'existing files' counts as a fail)
+## (this is after fasterq-dump because 'existing files' counts as a fail)
 set -euo pipefail
 
 # Determine if single reads or paired-end reads for downstream processing
@@ -128,7 +125,7 @@ if [ ${PAIRED} > 0 ] && \
             do trim_galore \
                --paired \
                --stringency 5 \
-               --quality 1
+               --quality 1 \
                -o data/fastq-adapter-trimmed \
                data/raw-sra/${SAMPLE}_1.fastq \
                data/raw-sra/${SAMPLE}_2.fastq
@@ -140,7 +137,7 @@ elif [ ${SINGLE} > 0 ] && \
      then for SAMPLE in ${@}
                do trim_galore \
                   --stringency 5 \
-                  --quality 1
+                  --quality 1 \
                   -o data/fastq-adapter-trimmed \
                   data/raw-sra/${SAMPLE}.fastq
                done
@@ -157,7 +154,12 @@ date >> analysis/timelogs/${SAMPLES}.log
 
 # Load Python3 for downstream steps
 module load python/3.6.0
+
+## known bug in `source` --> have to temp. disable unbound-variable protection
+set +u 
 source ~/py3/bin/activate
+## re-enable unbound-variable protection
+set -u
 
 # rnaSPAdes log info
 echo "Began contig assembly at" >> analysis/timelogs/${SAMPLES}.log
@@ -245,5 +247,5 @@ wc -l
 echo "Finished entire pipeline for ${SAMPLES}" > completed.pipeline
 
 # Copy results to final, permanent directory
-rsync -az ${WORKING_DIR}/ ${FINAL_DIR}/  
+rsync -az ${WORKING_DIR} ${FINAL_DIR}/  
 

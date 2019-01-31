@@ -16,7 +16,7 @@ for SAMPLE in ${FILES}
       echo -n \
       '          "../data/fastq-adapter-trimmed/' >> ${OUTPUT}
       echo \
-      ${SAMPLE}_1_trimmed.fq\", >> ${OUTPUT}
+      ${SAMPLE}_1_val_1.fq\", >> ${OUTPUT}
    done
 
 # Remove the last comma
@@ -34,7 +34,7 @@ for SAMPLE in ${FILES}
       echo -n \
       '          "../data/fastq-adapter-trimmed/' >> ${OUTPUT}
       echo \
-      ${SAMPLE}_2_trimmed.fq\", >> ${OUTPUT}
+      ${SAMPLE}_2_val_2.fq\", >> ${OUTPUT}
    done
 
 # Remove the last comma
