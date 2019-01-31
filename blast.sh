@@ -68,8 +68,8 @@ mkdir -p blast
 echo "Building BLAST database from given contigs" && date
 
 # Create name for BLAST output file
-BLAST_NAME_CONTIGS=`echo ${CONTIGS} | sed "s|^\.*/*||"`
-BLAST_NAME_VIRUS_QUERY=`echo ${VIRUS_QUERY} | sed "s|^\.*/*||"`
+BLAST_NAME_CONTIGS=`echo ${CONTIGS} | sed "s|^[\.*/*]*||"`
+BLAST_NAME_VIRUS_QUERY=`echo ${VIRUS_QUERY} | sed "s|^[\.*/*]*||"`
 
 # Make BLAST db from contigs
 makeblastdb \
