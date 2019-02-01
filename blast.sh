@@ -106,6 +106,6 @@ ${BLAST_TYPE} \
 echo "Job finished at" && date
 
 # Make a token to indicate the job finished correctly
-echo "Finished BLAST (${BLAST_TYPE}), using ${VIRUS_QUERY} to query against ${CONTIGS}" > \
+echo "Finished BLAST (${BLAST_TYPE}), using ${VIRUS_QUERY} to query against ${CONTIGS}" >> \
 blast/blast.complete
 
