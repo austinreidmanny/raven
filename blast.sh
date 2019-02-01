@@ -67,9 +67,17 @@ mkdir -p blast
 # Indicate that database creation is beginning
 echo "Building BLAST database from given contigs" && date
 
-# Create name for BLAST output file
-BLAST_NAME_CONTIGS=`echo ${CONTIGS} | sed "s|^[\.*/*]*||"`
-BLAST_NAME_VIRUS_QUERY=`echo ${VIRUS_QUERY} | sed "s|^[\.*/*]*||"`
+# Create names for BLAST output file
+
+## truncates file path, leaving just the filename itself
+CONTIGS_FILE=${CONTIGS##*/}
+
+## eliminates file extension, giving a cleaner name for blast
+BLAST_NAME_CONTIGS=${CONTIGS_FILE%.*} 
+
+## repeat for VIRUS_QUERY
+VIRUS_QUERY_FILE=${VIRUS_QUERY##*/}
+BLAST_NAME_VIRUS_QUERY=${VIRUS_QUERY%.*}
 
 # Make BLAST db from contigs
 makeblastdb \
