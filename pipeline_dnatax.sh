@@ -21,7 +21,7 @@ export PROJECT=""
 #####################################
 
 # Check to make sure project name is given above; if not, exit with error code 1
-if [ -z "${PROJECT}" ]
+if [[ -z "${PROJECT}" ]]
   then echo "No PROJECT name given."
   echo "Please edit this parameter at top of the pipeline script"
   exit 1
@@ -68,7 +68,7 @@ cp ${HOME_DIR}/yaml_spades_singlereads.sh scripts/
 
 # Check to make sure samples are given, in the form of 1+ SRA accession(s)
 # If not, exit with error code 2
-if [ -z "$1" ]
+if [[ -z "$1" ]]
 	then echo "No project/sample name is given."
         echo "Must specify one or more samples"
 	echo "Usage: ./pipeline.sh SRX000001 [SRX00002] [SRX00003] [...]"
@@ -100,13 +100,14 @@ for SAMPLE in ${@}
 set -euo pipefail
 
 # Determine if single reads or paired-end reads for downstream processing
-PAIRED=0
-SINGLE=0
+export PAIRED=0
+export SINGLE=0
+
 for SAMPLE in ${@}
-   do if [ -f data/raw-sra/${SAMPLE}.fastq ]
+   do if [[ -f data/raw-sra/${SAMPLE}.fastq ]]
       then let "SINGLE += 1"
-   elif [ -f data/raw-sra/${SAMPLE}_1.fastq ] && \
-        [ -f data/raw-sra/${SAMPLE}_2.fastq ]
+   elif [[ -f data/raw-sra/${SAMPLE}_1.fastq ]] && \
+        [[ -f data/raw-sra/${SAMPLE}_2.fastq ]]
       then let "PAIRED += 1"
    else
       echo "ERROR: cannot determine if input libraries are paired-end or single-end"
@@ -119,8 +120,8 @@ date >> analysis/timelogs/${SAMPLES}.log
 
 # Trim adapters from raw SRA files
 ## Run TrimGalore! in paired-end mode
-if [ ${PAIRED} > 0 ] && \
-   [ ${SINGLE} = 0 ]
+if [[ ${PAIRED} > 0 ]] && \
+   [[ ${SINGLE} = 0 ]]
    then for SAMPLE in ${@}
             do trim_galore \
                --paired \
@@ -132,8 +133,8 @@ if [ ${PAIRED} > 0 ] && \
             done
 
 ## Run TrimGalore! in single/unpaired-end mode
-elif [ ${SINGLE} > 0 ] && \
-     [ ${PAIRED} = 0 ]
+elif [[ ${SINGLE} > 0 ]] && \
+     [[ ${PAIRED} = 0 ]]
      then for SAMPLE in ${@}
                do trim_galore \
                   --stringency 5 \
@@ -166,11 +167,11 @@ echo "Began contig assembly at" >> analysis/timelogs/${SAMPLES}.log
 date >> analysis/timelogs/${SAMPLES}.log
 
 # Construct YAML input file for rnaSPAdes
-if [ ${PAIRED} > 0 ] && \
-   [ ${SINGLE} = 0 ]
+if [[ ${PAIRED} > 0 ]] && \
+   [[ ${SINGLE} = 0 ]]
    then scripts/yaml_spades_pairedreads.sh ${@}
-elif [ ${SINGLE} > 0 ] && \
-     [ ${PAIRED} = 0 ]
+elif [[ ${SINGLE} > 0 ]] && \
+     [[ ${PAIRED} = 0 ]]
    then scripts/yaml_spades_singlereads.sh ${@}
 else
    echo "ERROR: could not build YAML configuration file for rnaSPAdes"
@@ -200,7 +201,6 @@ echo "Began taxonomic classification at:" >> analysis/timelogs/${SAMPLES}.log
 date >> analysis/timelogs/${SAMPLES}.log
 
 # Do classification of the contigs with Diamond
-mkdir -p diamond
 diamond \
 blastx \
 --verbose \
@@ -247,5 +247,24 @@ wc -l
 echo "Finished entire pipeline for ${SAMPLES}" > completed.pipeline
 
 # Copy results to final, permanent directory
-rsync -az ${WORKING_DIR} ${FINAL_DIR}/  
+mkdir -p ${FINAL_DIR}/analysis
+mkdir -p ${FINAL_DIR}/scripts
+mkdir -p ${FINAL_DIR}/data/contigs/
+
+rsync -azv ${WORKING_DIR}/analysis ${FINAL_DIR}/analysis 
+rsync -azv ${WORKING_DIR}/scripts ${FINAL_DIR}/scripts
+rsync -azv ${WORKING_DIR}/data/contigs ${FINAL_DIR}/data/contigs
+
+# Handle FASTQ files
+mkdir -p ${FINAL_DIR}/data/raw-sra
+mkdir -p ${FINAL_DIR}/data/fastq-adapter-trimmed
+
+echo "FASTQ files not saved long-term; available in working directory if needed ${WORKING_DIR}" > \
+${FINAL_DIR}/data/raw-sra/README.txt
+
+echo "FASTQ files not saved long-term; available in working directory if needed: ${WORKING_DIR}" > \
+${FINAL_DIR}/data/fastq-adapter-trimmed/README.txt
+
+# Remove temporary files
+rm -R ${TEMP_DIR}
 
