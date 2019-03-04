@@ -13,6 +13,7 @@
 module load gcc/6.2.0
 module load python/2.7.12
 module load trimgalore
+mkdir -p logs
 # note: also requires Diamond, rnaSPAdes, and seqtk
 
 ####################################
@@ -212,6 +213,8 @@ blastx \
 --outfmt 102 \
 --max-hsps 1 \
 --top 1 \
+--block-size 5 \
+--index-chunks 2 \
 --tmpdir ${TEMP_DIR}
 
 # diamond log info
