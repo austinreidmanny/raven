@@ -7,7 +7,7 @@ import requests
 
 # Check to make sure this script is invoked correctly
 if len(sys.argv) < 2:
-	print("Usage '{} {}'.format(sys.argv[0], 'diamond_results.txt')")
+	print("Usage {} {}".format(sys.argv[0], 'diamond_results.txt'))
 	exit(1)
 
 # Setup the inputs and outputs
