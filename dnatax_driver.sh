@@ -40,25 +40,26 @@ export PROJECT
 export SAMPLES
 
 # Launch the setup script
-# sbatch -p short --mem 2GB -c 1 -t 00-00:05 ./setup.sh
+sbatch -p short --mem 2GB -c 1 -t 00-00:05 ./setup.sh
 
 # Launch the script that downloads the SRA files from NCBI
-# ./download_sra.sh
+sbatch -p short --mem 50GB -c 1 -t 00-01:00 ./download_sra.sh
 
 # Launch the adapter trimming script
-# ./adapter_trimming.sh
+sbatch -p short --mem 50GB -c 1 -t 00-02:00 ./adapter_trimming.sh
 
 # Launch the de novo assembly scripts
-# ./de_novo_assembly.sh
+export MEM="50" # will be referenced directly by the assembly program
+sbatch -p short --mem ${MEM}GB -c 6 -t 01-00:00 ./de_novo_assembly.sh
 
 # Launch the taxonomic classification script
-# ./classification.sh
+sbatch -p short --mem 50GB -c 6 -t 01-00:00 ./classification.sh
 
 # Launch the script that converts NCBI taxonomy IDs to full taxonomic lineages
-# ./fetch_taxonomy.sh
+sbatch -p short --mem 2GB -c 1 -t 00-01:00 ./fetch_taxonomy.sh
 
 # Launch the script that extracts viral sequences from all the assembled contigs
-# ./extract_virus.sh
+sbatch -p short --mem 2GB -c 1 -t 00-00:15
 
 # Launch the final save and cleanup script
-# ./cleanup.sh
+sbatch -p short --mem 8GB -c 1 -t 00-02:00 ./cleanup.sh
