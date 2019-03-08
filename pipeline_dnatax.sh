@@ -190,7 +190,7 @@ rnaspades.py \
 
 # Copy the results files from the temp directory to the working directory
 cp ${TEMP_DIR}/transcripts.fasta data/contigs/${SAMPLES}.contigs.fasta
-cp ${TEMP_DIR}/transcripts.paths analysis/contigs/${SAMPLES}.contigs.paths
+cp ${TEMP_DIR}/transcripts.paths data/contigs/${SAMPLES}.contigs.paths
 cp ${TEMP_DIR}/spades.log analysis/contigs/${SAMPLES}.contigs.log
 
 # rnaSPAdes log info
