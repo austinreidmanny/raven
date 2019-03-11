@@ -3,11 +3,11 @@
 # no SBATCH commands needed because this will just launch the modules
 
 # Set up a usage statement in case this program is called incorrectly
-usage() { echo "Make sure to provide a project name" \
-                "and one or more SRR accession numbers"
-					1>&2;
+usage() { echo "ERROR: Missing project and/or sample names." \
+               "Make sure to provide a project name" \
+                "and one or more SRR accession numbers" >&2;
 					echo "Usage: $0 -p PROJECT -s SRR0001 (SRR0002) (SRR...)" \
-          1>&2; exit 1; }
+          >&2; exit 1; }
 
 # Make sure the pipeline is invoked correctly, with project and sample names
 while getopts "p:s:" arg; do
@@ -49,8 +49,8 @@ sbatch -p short --mem 50GB -c 1 -t 00-01:00 ./download_sra.sh
 sbatch -p short --mem 50GB -c 1 -t 00-02:00 ./adapter_trimming.sh
 
 # Launch the de novo assembly scripts
-export MEM="50" # will be referenced directly by the assembly program
-sbatch -p short --mem ${MEM}GB -c 6 -t 01-00:00 ./de_novo_assembly.sh
+export MAX_MEM="50" # will be referenced directly by the assembly program
+sbatch -p short --mem ${MAX_MEM}GB -c 6 -t 01-00:00 ./de_novo_assembly.sh
 
 # Launch the taxonomic classification script
 sbatch -p short --mem 50GB -c 6 -t 01-00:00 ./classification.sh
