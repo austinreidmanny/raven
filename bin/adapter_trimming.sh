@@ -5,12 +5,21 @@
 ################################################################################
 
 ################################################################################
+# Load necessary software
+module load gcc/6.2.0 >&2
+module load python/2.7.12 >&2
+module load trimgalore >&2
+################################################################################
+
+################################################################################
 # Check to make sure project and sample names are provided
 if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ; then
   then echo "ERROR: Missing Project and/or Sample names." >&2
   exit 1
 fi
+################################################################################
 
+################################################################################
 # Adapter trimming log info
 echo "Began adapter trimming at" >> analysis/timelogs/${SAMPLES}.log
 date >> analysis/timelogs/${SAMPLES}.log
