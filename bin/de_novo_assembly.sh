@@ -58,12 +58,19 @@ rnaspades.py \
 --tmp-dir ${TEMP_DIR} \
 --dataset scripts/${SAMPLES}.input.yaml \
 -o ${TEMP_DIR}
+################################################################################
 
+################################################################################
 # Copy the results files from the temp directory to the working directory
+################################################################################
 cp ${TEMP_DIR}/transcripts.fasta data/contigs/${SAMPLES}.contigs.fasta
 cp ${TEMP_DIR}/transcripts.paths data/contigs/${SAMPLES}.contigs.paths
 cp ${TEMP_DIR}/spades.log analysis/contigs/${SAMPLES}.contigs.log
+################################################################################
 
+################################################################################
 # rnaSPAdes log info
+################################################################################
 echo "Finished contig assembly at:" >> analysis/timelogs/${SAMPLES}.log
 date >> analysis/timelogs/${SAMPLES}.log
+################################################################################
