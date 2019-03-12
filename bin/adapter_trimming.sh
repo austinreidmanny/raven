@@ -4,8 +4,12 @@
 # This script will automatically detect and remove adapter sequences from FASTQs
 ################################################################################
 
+# If any step fails, the script will stop to prevent propogating errors
+set -euo pipefail
+
 ################################################################################
-# Load necessary software
+# Load necessary software from the cluster; if not on the cluster, ensure that
+# these Python and TrimGalore are available to call (i.e. in your PATH)
 module load gcc/6.2.0 >&2
 module load python/2.7.12 >&2
 module load trimgalore >&2
@@ -67,7 +71,7 @@ if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
 ## Run TrimGalore! in paired-end mode
 if [[ ${PAIRED} > 0 ]] && \
    [[ ${SINGLE} = 0 ]]
-   then for SAMPLE in ${@}
+   then for SAMPLE in ${ALL_SAMPLES}
             do trim_galore \
                --paired \
                --stringency 5 \
@@ -80,7 +84,7 @@ if [[ ${PAIRED} > 0 ]] && \
 ## Run TrimGalore! in single/unpaired-end mode
 elif [[ ${SINGLE} > 0 ]] && \
      [[ ${PAIRED} = 0 ]]
-     then for SAMPLE in ${@}
+     then for SAMPLE in ${ALL_SAMPLES}
                do trim_galore \
                   --stringency 5 \
                   --quality 1 \
