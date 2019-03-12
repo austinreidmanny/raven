@@ -24,7 +24,7 @@
 usage() { echo "ERROR: Missing project and/or sample names." \
                "Make sure to provide a project name" \
                 "and one or more SRR accession numbers" >&2;
-					echo "Usage: $0 -p PROJECT -s SRR0001 (SRR0002) (SRR...)" \
+          echo "Usage: $0 -p PROJECT -s SRR0001 (SRR0002) (SRR...)" \
           >&2; exit 1; }
 
 # Make sure the pipeline is invoked correctly, with project and sample names
@@ -32,13 +32,13 @@ while getopts "p:s:" arg; do
 	case ${arg} in
 		p ) # Take in the project name
 		  PROJECT=${OPTARG}
-			;;
+                  ;;
 		s ) # Take in the sample name(s)
 		  SAMPLES=${OPTARG}
-      ;;
+                  ;;
 		* ) # Display help
 		  usage
-			;;
+                  ;;
 	esac
 done
 shift $((OPTIND-1))
@@ -91,3 +91,4 @@ sbatch -p short --mem 2GB -c 1 -t 00-00:15 bin/extract_viral.sh
 # Launch the final save and cleanup script
 sbatch -p short --mem 8GB -c 1 -t 00-02:00 bin/cleanup.sh
 ################################################################################
+
