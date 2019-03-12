@@ -158,7 +158,7 @@ date >> analysis/timelogs/${SAMPLES}.log
 module load python/3.6.0
 
 ## known bug in `source` --> have to temp. disable unbound-variable protection
-set +u 
+set +u
 source ~/py3/bin/activate
 ## re-enable unbound-variable protection
 set -u
@@ -241,10 +241,10 @@ cut -f 1 | \
 seqtk subseq data/contigs/${SAMPLES}.contigs.fasta - > \
 analysis/viruses/${SAMPLES}.viruses.fasta
 
-# Print number of viral sequences 
+# Print number of viral sequences
 echo "Number of viral contigs in ${SAMPLES}:"
 grep "^>" analysis/viruses/${SAMPLES}.viruses.fasta | \
-wc -l 
+wc -l
 
 # Create a small token to indicate it finished correctly
 echo "Finished entire pipeline for ${SAMPLES}" > completed.pipeline
@@ -254,9 +254,9 @@ mkdir -p ${FINAL_DIR}/analysis
 mkdir -p ${FINAL_DIR}/scripts
 mkdir -p ${FINAL_DIR}/data/contigs/
 
-rsync -azv ${WORKING_DIR}/analysis ${FINAL_DIR}/analysis 
-rsync -azv ${WORKING_DIR}/scripts ${FINAL_DIR}/scripts
-rsync -azv ${WORKING_DIR}/data/contigs ${FINAL_DIR}/data/contigs
+rsync -azv ${WORKING_DIR}/analysis/ ${FINAL_DIR}/analysis
+rsync -azv ${WORKING_DIR}/scripts/ ${FINAL_DIR}/scripts
+rsync -azv ${WORKING_DIR}/data/contigs/ ${FINAL_DIR}/data/contigs
 
 # Handle FASTQ files
 mkdir -p ${FINAL_DIR}/data/raw-sra
@@ -270,4 +270,3 @@ ${FINAL_DIR}/data/fastq-adapter-trimmed/README.txt
 
 # Remove temporary files
 rm -R ${TEMP_DIR}
-
