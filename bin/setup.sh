@@ -4,6 +4,12 @@
 # This script will set up the computational environment for the pipeline
 ###############################################################################
 
+###############################################################################
+# Error checking
+###############################################################################
+# If any step fails, the script will stop
+set -euo pipefail
+
 # Check to make sure project and samples are given
 if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ; then
   then echo "ERROR: Missing Project and/or Sample names." >&2
