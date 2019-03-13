@@ -18,6 +18,12 @@ if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ;
   exit 1
 fi
 
+# Make sure that DIAMOND is installed
+command -v diamond || \
+echo -e "ERROR: This script requires `diamond` but it could not found. \n" \
+        "Please install this application. \n" \
+        "Exiting with error code 6..." >&2; exit 6
+
 # Check for a DIAMOND database to use
 if [[ -z "${DIAMOND_DB_DIR}" ]] ; then
   then echo -e "ERROR: Missing directory for Diamond database. \n" \

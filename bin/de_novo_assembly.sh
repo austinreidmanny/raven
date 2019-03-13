@@ -25,6 +25,18 @@ if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ;
   then echo "ERROR: Missing Project and/or Sample names." >&2
   exit 1
 fi
+
+# Make sure that rnaSPAdes is installed
+command -v rnaspades.py || \
+echo -e "ERROR: This script requires `rnaspades` but it could not found. \n" \
+        "Please install this application. \n" \
+        "Exiting with error code 6..." >&2; exit 6
+
+# Make sure that python3 is installed
+command -v python || \
+echo -e "ERROR: This script requires `python3` but it could not found. \n" \
+        "Please install this application. \n" \
+        "Exiting with error code 6..." >&2; exit 6
 ################################################################################
 
 ################################################################################
@@ -43,8 +55,8 @@ elif [[ ${SINGLE} > 0 ]] && \
      [[ ${PAIRED} = 0 ]]
    then scripts/yaml_spades_singlereads.sh ${ALL_SAMPLES}
 else
-   echo "ERROR: could not build YAML configuration file for rnaSPAdes" \
-        "Possibly mixed input libraries: both single and paired end reads" >&2
+   echo -e "ERROR: could not build YAML configuration file for rnaSPAdes. \n" \
+           "Possibly mixed input libraries: both single & paired end reads" >&2
    exit
 fi
 ################################################################################

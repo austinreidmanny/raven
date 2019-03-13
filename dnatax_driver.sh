@@ -103,7 +103,7 @@ sbatch -p short --mem 2GB -c 1 -t 00-01:00 bin/fetch_taxonomy.sh
 echo "Launched fetch_taxonomy.sh"
 
 # Launch the script that extracts viral sequences from all the assembled contigs
-sbatch -p short --mem 2GB -c 1 -t 00-00:15 bin/extract_viral.sh
+sbatch -p short --mem 2GB -c 1 -t 00-00:30 bin/extract_viral.sh
 echo "Launched extract_viral.sh"
 
 # Launch the final save and cleanup script

@@ -73,9 +73,9 @@ if [[ -f ${HOME_DIR}/diamondToTaxonomy.py ]] && \
 # If the scripts are not available to copy, then tell user where to download
 # them, then exit
 else
-  echo "One or more of the following scripts are missing:" \
-       "diamondToTaxonomy.py, yaml_spades_pairedreads.sh, " \
-       "yaml_spades_singlereads.sh" >&2
+  echo -e "One or more of the following scripts are missing: \n" \
+          "diamondToTaxonomy.py, yaml_spades_pairedreads.sh, " \
+          "yaml_spades_singlereads.sh" >&2
   echo "Please download these from github.com/austinreidmanny/dnatax" >&2
   echo "ERROR: Cannot find mandatory helper scripts. Exiting" >&2
   exit 1

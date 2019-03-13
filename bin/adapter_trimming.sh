@@ -21,6 +21,18 @@ if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ;
   then echo "ERROR: Missing Project and/or Sample names." >&2
   exit 1
 fi
+
+# Make sure that python2 is installed
+command -v python || \
+echo -e "ERROR: This script requires `python2` but it could not found. \n" \
+        "Please install this application. \n" \
+        "Exiting with error code 6..." >&2; exit 6
+
+# Make sure that TrimGalore is installed
+command -v trim_galore || \
+echo -e "ERROR: This script requires `trim_galore` but it could not found. \n" \
+        "Please install this application. \n" \
+        "Exiting with error code 6..." >&2; exit 6
 ################################################################################
 
 ################################################################################
@@ -93,8 +105,8 @@ elif [[ ${SINGLE} > 0 ]] && \
                done
 
 else
-   echo "ERROR: could not determine library type"
-   echo "Possibly mixed input libraries: both single and paired end reads"
+   echo -e "ERROR: could not determine library type" >&2 \
+           "Possibly mixed input libraries: both single & paired-end reads" >&2
    exit 3
 fi
 ################################################################################
