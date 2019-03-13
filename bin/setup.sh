@@ -11,7 +11,7 @@
 set -euo pipefail
 
 # Check to make sure project and samples are given
-if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ; then
+if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ; 
   then echo "ERROR: Missing Project and/or Sample names." >&2
   exit 1
 fi

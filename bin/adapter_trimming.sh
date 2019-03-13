@@ -17,7 +17,7 @@ module load trimgalore >&2
 
 ################################################################################
 # Check to make sure project and sample names are provided
-if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ; then
+if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ;
   then echo "ERROR: Missing Project and/or Sample names." >&2
   exit 1
 fi
