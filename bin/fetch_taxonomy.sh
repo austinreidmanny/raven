@@ -24,8 +24,8 @@ fi
 
 # Check to make sure there is a DIAMOND results file to read from
 if [[ ! -f analysis/diamond/${SAMPLES}.nr.diamond.txt ]] ;
-	then echo -e "ERROR: No DIAMOND results file found. \nExiting..." >&2
-	exit 5
+  then echo -e "ERROR: No DIAMOND results file found. \nExiting..." >&2
+  exit 5
 fi
 ################################################################################
 

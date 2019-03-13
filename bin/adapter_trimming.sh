@@ -36,32 +36,32 @@ date >> analysis/timelogs/${SAMPLES}.log
 if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
   then echo "WARNING: Sequencing library type not automatically detected";
 
-	# If library type is not automatically detected, check if lib type was
-	# provided by the user
-		while getopts ":l:" arg; do
+  # If library type is not automatically detected, check if lib type was
+  # provided by the user
+    while getopts ":l:" arg; do
       case ${arg} in
-      	l ) # Take in the library typ
-        	LIB_TYPE=${OPTARG}
+        l ) # Take in the library typ
+          LIB_TYPE=${OPTARG}
           if [[ ${LIB_TYPE} == "paired" ]]; then
-          	PAIRED=1; SINGLE=0;
+            PAIRED=1; SINGLE=0;
           elif [[ ${LIB_TYPE} == "single" ]]; then
-          	PAIRED=0; SINGLE=1
+            PAIRED=0; SINGLE=1
           else
-	        	echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
+            echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
             exit 3;
           fi;
           ;;
 
        * ) # If any other option given, exit
            echo -e "ERROR: Unexpected option given in command line. \n" \
-					         "Only acceptable option is specifying library type: \n" \
-									 "'./adapter_trimming.sh' \n" \
-									 "or \n"
-							     "'./adapter_trimming.sh -l paired' \n" \
-								   "or \n" \
-							     "'./adapter_trimming.sh -l single'" >&2
-								exit 4;;
-		  esac
+                   "Only acceptable option is specifying library type: \n" \
+                   "'./adapter_trimming.sh' \n" \
+                   "or \n"
+                   "'./adapter_trimming.sh -l paired' \n" \
+                   "or \n" \
+                   "'./adapter_trimming.sh -l single'" >&2
+                exit 4;;
+      esac
     done
 ################################################################################
 

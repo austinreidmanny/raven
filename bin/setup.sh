@@ -11,7 +11,7 @@
 set -euo pipefail
 
 # Check to make sure project and samples are given
-if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ; 
+if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ;
   then echo "ERROR: Missing Project and/or Sample names." >&2
   exit 1
 fi
@@ -63,21 +63,21 @@ mkdir -p scripts
 # Copy key scripts (taxonomy and yaml-config-builders) from HOME to WORKING dir
 if [[ -f ${HOME_DIR}/diamondToTaxonomy.py ]] && \
    [[ -f ${HOME_DIR}/yaml_spades_pairedreads.sh && || \
-	 [[ -f ${HOME_DIR}/yaml_spades_singlereads.sh]];
+   [[ -f ${HOME_DIR}/yaml_spades_singlereads.sh]];
 
   then echo "All neccessary scripts are available to copy. COPYING...";
-	cp ${HOME_DIR}/diamondToTaxonomy.py scripts/
-	cp ${HOME_DIR}/yaml_spades_pairedreads.sh scripts/
-	cp ${HOME_DIR}/yaml_spades_singlereads.sh scripts/;
+  cp ${HOME_DIR}/diamondToTaxonomy.py scripts/
+  cp ${HOME_DIR}/yaml_spades_pairedreads.sh scripts/
+  cp ${HOME_DIR}/yaml_spades_singlereads.sh scripts/;
 
 # If the scripts are not available to copy, then tell user where to download
 # them, then exit
 else
-	echo "One or more of the following scripts are missing:" \
-	     "diamondToTaxonomy.py, yaml_spades_pairedreads.sh, " \
-			 "yaml_spades_singlereads.sh" >&2
+  echo "One or more of the following scripts are missing:" \
+       "diamondToTaxonomy.py, yaml_spades_pairedreads.sh, " \
+       "yaml_spades_singlereads.sh" >&2
   echo "Please download these from github.com/austinreidmanny/dnatax" >&2
-	echo "ERROR: Cannot find mandatory helper scripts. Exiting" >&2
+  echo "ERROR: Cannot find mandatory helper scripts. Exiting" >&2
   exit 1
 fi
 

@@ -21,9 +21,9 @@ fi
 # Check for a DIAMOND database to use
 if [[ -z "${DIAMOND_DB_DIR}" ]] ; then
   then echo -e "ERROR: Missing directory for Diamond database. \n" \
-	             "Please specify this DIAMOND_DB_DIR value in the setup.sh " \
-							 "script"   >&2
-			 exit 4
+               "Please specify this DIAMOND_DB_DIR value in the setup.sh " \
+               "script"   >&2
+       exit 4
 fi
 ################################################################################
 
