@@ -22,9 +22,9 @@ if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ;
   exit 1
 fi
 
-# Check to make sure there is a DIAMOND results file to read from
-if [[ ! -f analysis/diamond/${SAMPLES}.nr.diamond.txt ]] ;
-  then echo -e "ERROR: No DIAMOND results file found. \nExiting..." >&2
+# Check to make sure the diamondToTaxonomy.py script is available
+if [[ ! -f scripts/diamondToTaxonomy.py ]] ;
+  then echo -e "ERROR: No diamondToTaxonomy.py script found. \nExiting..." >&2
   exit 5
 fi
 ################################################################################
@@ -46,30 +46,8 @@ cd ../../
 ################################################################################
 
 ################################################################################
-# Viral sequences log info
+# Taxonomy sequences log info
 ################################################################################
-echo "Beginning taxonomy conversion:" >> analysis/timelogs/${SAMPLES}.log
+echo "Finished taxonomy conversion:" >> analysis/timelogs/${SAMPLES}.log
 date >> analysis/timelogs/${SAMPLES}.log
-################################################################################
-
-################################################################################
-# Extract viral sequences and save them to a new file
-################################################################################
-# Save the virus-specific taxonomy results
-grep Viruses analysis/taxonomy/${SAMPLES}.nr.diamond.taxonomy.txt > \
-analysis/viruses/${SAMPLES}.viruses.taxonomy.txt
-
-# Retrieve the viral sequences and save them in a FASTA file
-grep Viruses analysis/taxonomy/${SAMPLES}.nr.diamond.taxonomy.txt | \
-cut -f 1 | \
-seqtk subseq data/contigs/${SAMPLES}.contigs.fasta - > \
-analysis/viruses/${SAMPLES}.viruses.fasta
-################################################################################
-
-################################################################################
-# Print number of viral sequences
-################################################################################
-echo "Number of viral contigs in ${SAMPLES}:"
-grep "^>" analysis/viruses/${SAMPLES}.viruses.fasta | \
-wc -l
 ################################################################################
