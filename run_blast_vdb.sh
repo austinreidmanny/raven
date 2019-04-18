@@ -124,7 +124,7 @@ touch ${LOG_FILE}
 
 ###############################################################################
 # RUN BLAST
-################################################################################
+###############################################################################
 
 # Print time started and write to log file
 echo "Began running ${BLAST_TYPE} with samples ${SAMPLES} at:" | tee ${LOG_FILE}
@@ -145,3 +145,9 @@ ${BLAST_TYPE} \
 echo "Finished running ${BLAST_TYPE} at:" | tee -a ${LOG_FILE}
 date | tee -a ${LOG_FILE}
 
+############################################################################################
+# Create FASTA sequence file of hits
+############################################################################################
+
+awk '{print ">"$3"\n"$4}' ${SAMPLES}/blastn_vdb.${SAMPLES}.${BLAST_NAME_VIRUS_QUERY}.txt > \
+    ${SAMPLES}/blastn_vdb.${SAMPLES}.${BLAST_NAME_VIRUS_QUERY}.fasta
