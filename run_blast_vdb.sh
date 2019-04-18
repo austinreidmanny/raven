@@ -102,7 +102,6 @@ echo -e "\n" \
         "e-value: ${E_VALUE} \n" \
         "Blast program: ${BLAST_TYPE} > ${BLAST_TASK} \n"
 
-exit
 ################################################################################
 # CREATE DIRECTORIES AND PREPARE NAMES FOR BLAST
 ################################################################################
