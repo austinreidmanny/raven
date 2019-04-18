@@ -98,7 +98,7 @@ touch ${LOG_FILE}
 
 # Print time started and write to log file
 echo "Began running ${BLAST_TYPE} with samples ${SAMPLES} at:" | tee ${LOG_FILE}
-date | tee ${LOG_FILE}
+date | tee -a ${LOG_FILE}
 
 # Run blastn_vdb
 ${BLAST_TYPE} \
@@ -112,6 +112,6 @@ ${BLAST_TYPE} \
 -max_target_seqs 100000000
 
 # Print time completed and write to log file as well
-echo "Finished running ${BLAST_TYPE} at:" | tee ${LOG_FILE}
-date | tee ${LOG_FILE}
+echo "Finished running ${BLAST_TYPE} at:" | tee -a ${LOG_FILE}
+date | tee -a ${LOG_FILE}
 
