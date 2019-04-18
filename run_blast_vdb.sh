@@ -5,14 +5,22 @@
 ###############################################################################################
 
 # Set up a usage statement in case this program is called incorrectly
-usage() { echo -e "\nERROR: Missing SRA accessions and/or input query and/or query type. \n \n" \
+usage() { echo -e "\nERROR: Missing SRA accessions and/or input query and/or query type. \n\n" \
               "Make sure to provide one (or more) SRA run numbers separated by commas, \n" \
               "as well as a virus query (in fasta format), and indicate the query type \n" \
-              "as either 'nucl' or 'prot'."
-              "Usage: $0 -s SRR10001,SRR10002,SRR... -q VIRUS_QUERY -t nucl/prot" >&2; exit 1; }
+              "as either 'nucl' or 'prot' (do not include the quotes). \n\n" \
+              "Proper usage: \n" \
+              "$0 -s SRR10001,SRR10002,SRR... -q VIRUS_QUERY -t nucl|prot \n\n" \
+              "Optional parameters: \n" \
+                                   "-e (evalue, e.g. 100, 1, or 1e-99) \n" \
+                                   "-dc (sets program to discontiguous-megablast) \n" \
+                                   "-blastn (sets program to blastn) \n\n" \
+              "Example of a complex run: \n" \
+              "./run_blast_vdb.sh -s SRX193147,SRX193148,SRX193149 -q tvv2_nt.fasta -t nucl -e 1e-3 -dc \n\n" \
+              "Exiting..." >&2; exit 1; }
 
 # Make sure the pipeline is invoked correctly, with project and sample names
-while getopts "s:q:t:" arg; do
+while getopts "s:q:t:e:dn" arg; do
         case ${arg} in
                 s ) # Take in the sample name(s)
                   set -f
@@ -25,16 +33,30 @@ while getopts "s:q:t:" arg; do
                 t ) # Take in the query type (nucleotide or protein)
                   QUERY_TYPE=${OPTARG}
                         ;;
+                e) # set evalue
+                  E_VALUE=${OPTARG}
+                        ;;
+                d) # switch to discontiguous_megablast
+                  BLAST_TASK="dc_megablast"
+                        ;;
+                n) # switch to blastn
+                  BLAST_TASK="blastn"
+                        ;;
                 * ) # Display help
                   usage
                         ;;
         esac
 done
-shift $((OPTIND-1))
+shift $(( OPTIND-1 ))
 
 ################################################################################################
 # PROCESS THE USER PROVIDED PARAMETERS
 ################################################################################################
+
+# If the pipeline is not called correctly, tell that to the user and exit
+if [[ -z "${VIRUS_QUERY}" ]] || [[ -z "${ALL_SAMPLES}" ]] || [[ -z "${QUERY_TYPE}" ]] ; then
+        usage
+fi
 
 # Retrieve the name of last sample (using older but cross-platform compatible BASH notation)
 LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
@@ -46,32 +68,41 @@ SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
 set +f
 
 # Handle the query type provided by the user, using that to determine which type of blast to use
+## Nucleotide query
 if [[ ${QUERY_TYPE} == 'nucl' ]]; then
-        BLAST_TYPE='blastn_vdb'
+    BLAST_TYPE='blastn_vdb'
+    
+    # If -d (dc_megablst) or -n (blastn) flags were no given by user, default to megablast
+    if [[ -z "${BLAST_TASK}" ]]; then 
         BLAST_TASK='megablast'
+    fi
 
+## Protein query
 elif [[ ${QUERY_TYPE} == 'prot' ]]; then
-        BLAST_TYPE='tblastn_vdb'
-        BLAST_TASK='tblastn'
+    BLAST_TYPE='tblastn_vdb'
+    BLAST_TASK='tblastn'
 
+## Other/Error
 else
         echo "QUERY_TYPE is ${QUERY_TYPE}" 
         echo "QUERY_TYPE must be 'nucl' or 'prot' (do not include quotes)"
-        echo "exiting"
-        exit 2 
+        usage 
 fi
 
-# If the pipeline is not called correctly, tell that to the user and exit
-if [[ -z "${VIRUS_QUERY}" ]] || [[ -z "${SAMPLES}" ]] || [[ -z "${QUERY_TYPE}" ]] ; then
-        usage
+# If e-value wasn't provided by user, then set it to 1e-9
+if [[ -z ${E_VALUE} ]]; then
+    E_VALUE="1e-9"
 fi
 
 # Read inputs back to the user
 echo -e "\n" \
         "SRA Accessions provided: ${ALL_SAMPLES[@]} \n" \
         "Virus query file provided: ${VIRUS_QUERY} \n" \
-        "Molecule type (nucl or prot) of input query: ${QUERY_TYPE}"
+        "Molecule type (nucl or prot) of input query: ${QUERY_TYPE} \n" \
+        "e-value: ${E_VALUE} \n" \
+        "Blast program: ${BLAST_TYPE} > ${BLAST_TASK} \n"
 
+exit
 ################################################################################
 # CREATE DIRECTORIES AND PREPARE NAMES FOR BLAST
 ################################################################################
