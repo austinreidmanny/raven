@@ -64,6 +64,9 @@ LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
 # Create a variable that other parts of this pipeline can use mostly for naming
 SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
 
+# Format the SRA accessions correctly for BLAST db creation
+DB_SAMPLES=`echo "\"${ALL_SAMPLES[@]}\""`
+
 # Reset global expansion
 set +f
 
@@ -89,7 +92,7 @@ else
         usage 
 fi
 
-# If e-value wasn't provided by user, then set it to 1e-9
+# If e-value wasn provided by user, then set it to 1e-9
 if [[ -z ${E_VALUE} ]]; then
     E_VALUE="1e-9"
 fi
@@ -124,7 +127,7 @@ touch ${LOG_FILE}
 
 ###############################################################################
 # RUN BLAST
-###############################################################################
+################################################################################
 
 # Print time started and write to log file
 echo "Began running ${BLAST_TYPE} with samples ${SAMPLES} at:" | tee ${LOG_FILE}
@@ -133,10 +136,10 @@ date | tee -a ${LOG_FILE}
 # Run blastn_vdb
 ${BLAST_TYPE} \
 -task ${BLAST_TASK} \
--db ${ALL_SAMPLES} \
+-db ${DB_SAMPLES} \
 -query ${VIRUS_QUERY} \
 -out ${SAMPLES}/blastn_vdb.${SAMPLES}.${BLAST_NAME_VIRUS_QUERY}.txt \
--outfmt "6 qseqid sseqid evalue" \
+-outfmt "6 qseqid evalue sseqid sseq" \
 -num_threads 8 \
 -evalue 1e-9 \
 -max_target_seqs 100000000
@@ -151,3 +154,4 @@ date | tee -a ${LOG_FILE}
 
 awk '{print ">"$3"\n"$4}' ${SAMPLES}/blastn_vdb.${SAMPLES}.${BLAST_NAME_VIRUS_QUERY}.txt > \
     ${SAMPLES}/blastn_vdb.${SAMPLES}.${BLAST_NAME_VIRUS_QUERY}.fasta
+
