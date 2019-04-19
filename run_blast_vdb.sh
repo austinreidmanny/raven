@@ -97,14 +97,6 @@ if [[ -z ${E_VALUE} ]]; then
     E_VALUE="1e-9"
 fi
 
-# Read inputs back to the user
-echo -e "\n" \
-        "SRA Accessions provided: ${ALL_SAMPLES[@]} \n" \
-        "Virus query file provided: ${VIRUS_QUERY} \n" \
-        "Molecule type (nucl or prot) of input query: ${QUERY_TYPE} \n" \
-        "e-value: ${E_VALUE} \n" \
-        "Blast program: ${BLAST_TYPE} > ${BLAST_TASK} \n"
-
 ################################################################################
 # CREATE DIRECTORIES AND PREPARE NAMES FOR BLAST
 ################################################################################
@@ -124,6 +116,14 @@ BLAST_NAME_VIRUS_QUERY=${VIRUS_QUERY_FILE%.*}
 set -o errexit
 readonly LOG_FILE="${SAMPLES}/${BLAST_TYPE}.${SAMPLES}.${BLAST_NAME_VIRUS_QUERY}.log"
 touch ${LOG_FILE}
+
+# Read inputs back to the user and store them in the log
+echo -e "\n" \
+        "SRA Accessions provided: ${ALL_SAMPLES[@]} \n" \
+        "Virus query file provided: ${VIRUS_QUERY} \n" \
+        "Molecule type (nucl or prot) of input query: ${QUERY_TYPE} \n" \
+        "e-value: ${E_VALUE} \n" \
+        "Blast program: ${BLAST_TYPE} > ${BLAST_TASK} \n" | tee ${LOG_FILE}
 
 ###############################################################################
 # RUN BLAST
