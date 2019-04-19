@@ -48,7 +48,6 @@ date >> analysis/timelogs/${SAMPLES}.log
 ################################################################################
 # Check to see if seq library type has been set
 # (step performed automatically if download_sra.sh script is used
-
 if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
   echo "WARNING: Sequencing library type not automatically detected";
 
@@ -72,13 +71,15 @@ if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
            echo -e "ERROR: Unexpected option given in command line. \n" \
                    "Only acceptable option is specifying library type: \n" \
                    "'./adapter_trimming.sh' \n" \
-                   "or \n"
+                   "or \n" \
                    "'./adapter_trimming.sh -l paired' \n" \
                    "or \n" \
                    "'./adapter_trimming.sh -l single'" >&2
-                exit 4;;
+                exit 4
+                ;;
       esac
     done
+fi
 ################################################################################
 
 ################################################################################

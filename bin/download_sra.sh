@@ -25,8 +25,16 @@ echo "all samples: ${ALLSAMPLES}"
 # Download fastq files from the SRA
 for SAMPLE in ${ALLSAMPLES[@]}
    do \
-      fasterq-dump --split-3 -t ${TEMP_DIR} -p -v \
-      -e 6 --skip-technical --rowid-as-name --print-read-nr --mem=50GB \
+      fasterq-dump \
+      --split-3 \
+      -t ${TEMP_DIR} \
+      --progress --verbose \
+      --skip-technical --rowid-as-name --print-read-nr \
+      --threads=6 \
+      --mem=200GB \
+      --bufsize=1000MB \
+      --curcache=1000MB \
+      --force \
       --outdir data/raw-sra \
       ${SAMPLE}
    done
