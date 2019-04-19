@@ -97,8 +97,9 @@ echo "Launching setup.sh script"
 cd ${HOME_DIR}
 
 # Launch the script that downloads the SRA files from NCBI
-echo "Launching download_sra.sh"
-bin/download_sra.sh
+#echo "Launching download_sra.sh"
+. bin/download_sra.sh
+cd ${HOME_DIR}
 
 # Launch the adapter trimming script
 echo "Launching adapter_trimming.sh"
