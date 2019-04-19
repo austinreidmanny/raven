@@ -97,9 +97,9 @@ ${BLAST_TYPE} \
 -query ${VIRUS_QUERY} \
 -out blast/${BLAST_TYPE}.${BLAST_NAME_VIRUS_QUERY}.${BLAST_NAME_CONTIGS}.txt \
 -evalue 10 \
--num_threads 4
-#-outfmt "6 qseqid sseqid evalue " \
-# -max_target_seqs 1 \
+-num_threads 4 \
+-outfmt "6 qseqid sseqid evalue" \
+-max_target_seqs 10000000
 # -max_hsps 1 \
 
 # Indicate time of completion
