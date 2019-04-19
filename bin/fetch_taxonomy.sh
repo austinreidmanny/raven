@@ -27,6 +27,9 @@ if [[ ! -f scripts/diamondToTaxonomy.py ]] ;
   then echo -e "ERROR: No diamondToTaxonomy.py script found. \nExiting..." >&2
   exit 5
 fi
+
+# Change to the working directory
+cd ${WORKING_DIR}
 ################################################################################
 
 ################################################################################

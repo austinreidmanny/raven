@@ -37,6 +37,9 @@ command -v python || \
 echo -e "ERROR: This script requires `python3` but it could not found. \n" \
         "Please install this application. \n" \
         "Exiting with error code 6..." >&2; exit 6
+
+# Change to the working directory
+cd ${WORKING_DIR}
 ################################################################################
 
 ################################################################################
@@ -50,10 +53,10 @@ date >> analysis/timelogs/${SAMPLES}.log
 ################################################################################
 if [[ ${PAIRED} > 0 ]] && \
    [[ ${SINGLE} = 0 ]]
-   then scripts/yaml_spades_pairedreads.sh ${ALL_SAMPLES}
+   then scripts/yaml_spades_pairedreads.sh ${ALLSAMPLES}
 elif [[ ${SINGLE} > 0 ]] && \
      [[ ${PAIRED} = 0 ]]
-   then scripts/yaml_spades_singlereads.sh ${ALL_SAMPLES}
+   then scripts/yaml_spades_singlereads.sh ${ALLSAMPLES}
 else
    echo -e "ERROR: could not build YAML configuration file for rnaSPAdes. \n" \
            "Possibly mixed input libraries: both single & paired end reads" >&2

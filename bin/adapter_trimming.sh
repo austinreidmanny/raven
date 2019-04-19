@@ -33,6 +33,9 @@ command -v trim_galore || \
 echo -e "ERROR: This script requires `trim_galore` but it could not found. \n" \
         "Please install this application. \n" \
         "Exiting with error code 6..." >&2; exit 6
+
+# Change to the working directory
+cd ${WORKING_DIR}
 ################################################################################
 
 ################################################################################
@@ -83,7 +86,7 @@ if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
 ## Run TrimGalore! in paired-end mode
 if [[ ${PAIRED} > 0 ]] && \
    [[ ${SINGLE} = 0 ]]
-   then for SAMPLE in ${ALL_SAMPLES}
+   then for SAMPLE in ${ALLSAMPLES}
             do trim_galore \
                --paired \
                --stringency 5 \
@@ -96,7 +99,7 @@ if [[ ${PAIRED} > 0 ]] && \
 ## Run TrimGalore! in single/unpaired-end mode
 elif [[ ${SINGLE} > 0 ]] && \
      [[ ${PAIRED} = 0 ]]
-     then for SAMPLE in ${ALL_SAMPLES}
+     then for SAMPLE in ${ALLSAMPLES}
                do trim_galore \
                   --stringency 5 \
                   --quality 1 \

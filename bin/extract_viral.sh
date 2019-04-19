@@ -28,6 +28,9 @@ if [[ ! -f analysis/diamond/${SAMPLES}.nr.diamond.txt ]] ;
 then echo -e "ERROR: No DIAMOND results file found. \n" \
              "Exiting with error code 7 ..." >&2; exit 7
 fi
+
+# Change to the working directory
+cd ${WORKING_DIR}
 ###############################################################################
 
 ################################################################################

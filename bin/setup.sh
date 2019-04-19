@@ -62,8 +62,8 @@ mkdir -p scripts
 
 # Copy key scripts (taxonomy and yaml-config-builders) from HOME to WORKING dir
 if [[ -f ${HOME_DIR}/diamondToTaxonomy.py ]] && \
-   [[ -f ${HOME_DIR}/yaml_spades_pairedreads.sh && || \
-   [[ -f ${HOME_DIR}/yaml_spades_singlereads.sh]];
+   [[ -f ${HOME_DIR}/yaml_spades_pairedreads.sh ]] && \
+   [[ -f ${HOME_DIR}/yaml_spades_singlereads.sh ]] ;
 
   then echo "All neccessary scripts are available to copy. COPYING...";
   cp ${HOME_DIR}/diamondToTaxonomy.py scripts/

@@ -1,12 +1,19 @@
 #!/bin/bash
 
-# no SBATCH commands needed b/c this will just run briefly to launch the modules
+#SBATCH -t 03-00:00
+#SBATCH -p medium
+#SBATCH --mem=200G
+#SBATCH -c 6
+#SBATCH -o logs/slurm-%j.log
+#SBATCH -e logs/slurm-%j.err
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=austinmanny@g.harvard.edu
 
 ################################################################################
 # Objective
 ################################################################################
 # This pipeline is be the driver script for DNAtax using the SLURM jobs manager
-# Run this interactively by providing -p PROJECT & -s SRAaccs (full usage below)
+# Run this by SBATCHing with -p PROJECT & -s SRAaccs (full usage below)
 #
 # Full DNAtax pipeline downloads FASTQs from the NCBI-SRA, trims adapters,
 # performs de novo contig assembly, determines the taxonomic origin of
@@ -20,6 +27,8 @@
 ################################################################################
 # Error checking code to make sure the pipeline is called correctly (don't edit)
 ################################################################################
+set -euo pipefail
+
 # Set up a usage statement in case this program is called incorrectly
 usage() { echo -e "ERROR: Missing project and/or sample names. \n" \
               "Make sure to provide a project name, \n" \
@@ -33,14 +42,14 @@ while getopts "p:s:" arg; do
 		  PROJECT=${OPTARG}
 			;;
 		s ) # Take in the sample name(s)
-      set -f
-      IFS=","
-      ALL_SAMPLES=(${OPTARG}) # call this when you want every individual sample
-      ;;
+                  set -f
+                  IFS=","
+                  ALL_SAMPLES=(${OPTARG}) # call this when you want every individual sample
+                       ;;
 
 		* ) # Display help
 		  usage
-			;;
+		       ;;
 	esac
 done
 shift $((OPTIND-1))
@@ -66,9 +75,14 @@ fi
 echo "PROJECT name: ${PROJECT}"
 echo "SRA sample accessions: ${SAMPLES}"
 
-# Make these available to all subsequent scripts
+# Make these available to subsequent scripts
 export PROJECT
 export SAMPLES
+export ALL_SAMPLES
+
+# For some reason, BASH won't export ALL_SAMPLES with the underscore
+ALLSAMPLES=${ALL_SAMPLES}
+export ALLSAMPLES
 ################################################################################
 
 ################################################################################
@@ -78,35 +92,36 @@ export SAMPLES
 # Note: setup.sh is basically required
 
 # Launch the setup script
-sbatch -p short --mem 2GB -c 1 -t 00-00:05 bin/setup.sh
-echo "Launched setup.sh script"
+echo "Launching setup.sh script"
+. bin/setup.sh
+cd ${HOME_DIR}
 
 # Launch the script that downloads the SRA files from NCBI
-sbatch -p short --mem 50GB -c 1 -t 00-01:00 bin/download_sra.sh
-echo "Launched download_sra.sh"
+echo "Launching download_sra.sh"
+bin/download_sra.sh
 
 # Launch the adapter trimming script
-sbatch -p short --mem 50GB -c 1 -t 00-02:00 bin/adapter_trimming.sh
-echo "Launched adapter_trimming.sh"
+echo "Launching adapter_trimming.sh"
+bin/adapter_trimming.sh
 
 # Launch the de novo assembly scripts
-export MAX_MEM="50" # will be referenced directly by the assembly program
-sbatch -p short --mem ${MAX_MEM}GB -c 6 -t 00-11:59 bin/de_novo_assembly.sh
-echo "Launched de_novo_assembly.sh"
+export MAX_MEM="200" # will be referenced directly by the assembly program
+echo "Launching de_novo_assembly.sh"
+bin/de_novo_assembly.sh
 
 # Launch the taxonomic classification script
-sbatch -p medium --mem 50GB -c 6 -t 01-00:00 bin/classification.sh
-echo "Launched classification.sh"
+echo "Launching classification.sh"
+bin/classification.sh
 
 # Launch the script that converts NCBI taxonomy IDs to full taxonomic lineages
-sbatch -p short --mem 2GB -c 1 -t 00-01:00 bin/fetch_taxonomy.sh
-echo "Launched fetch_taxonomy.sh"
+echo "Launching fetch_taxonomy.sh"
+bin/fetch_taxonomy.sh
 
 # Launch the script that extracts viral sequences from all the assembled contigs
-sbatch -p short --mem 2GB -c 1 -t 00-00:30 bin/extract_viral.sh
-echo "Launched extract_viral.sh"
+echo "Launching extract_viral.sh"
+bin/extract_viral.sh
 
 # Launch the final save and cleanup script
-sbatch -p short --mem 8GB -c 1 -t 00-02:00 bin/cleanup.sh
-echo "Launched cleanup.sh"
+echo "Launching cleanup.sh"
+bin/cleanup.sh
 ################################################################################

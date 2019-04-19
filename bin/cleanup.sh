@@ -19,6 +19,9 @@ if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ;
   then echo "ERROR: Missing Project and/or Sample names." >&2
   exit 1
 fi
+
+# Change to the working directory
+cd ${WORKING_DIR}
 ################################################################################
 
 ################################################################################
