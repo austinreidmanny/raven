@@ -18,21 +18,22 @@ module load trimgalore >&2
 ################################################################################
 # Check to make sure project and sample names are provided
 if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ;
-  then echo "ERROR: Missing Project and/or Sample names." >&2
-  exit 1
+  then echo "ERROR: Missing Project and/or Sample names." >&2 && exit 1
 fi
 
 # Make sure that python2 is installed
 command -v python || \
-echo -e "ERROR: This script requires `python2` but it could not found. \n" \
+{ echo -e "ERROR: This script requires `python2` but it could not found. \n" \
         "Please install this application. \n" \
-        "Exiting with error code 6..." >&2; exit 6
+        "Exiting with error code 6..." >&2 && exit 6
+}
 
 # Make sure that TrimGalore is installed
 command -v trim_galore || \
-echo -e "ERROR: This script requires `trim_galore` but it could not found. \n" \
+{ echo -e "ERROR: This script requires `trim_galore` but it could not found. \n" \
         "Please install this application. \n" \
-        "Exiting with error code 6..." >&2; exit 6
+        "Exiting with error code 6..." >&2 && exit 6
+}
 
 # Change to the working directory
 cd ${WORKING_DIR}
@@ -49,7 +50,7 @@ date >> analysis/timelogs/${SAMPLES}.log
 # (step performed automatically if download_sra.sh script is used
 
 if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
-  then echo "WARNING: Sequencing library type not automatically detected";
+  echo "WARNING: Sequencing library type not automatically detected";
 
   # If library type is not automatically detected, check if lib type was
   # provided by the user
@@ -82,7 +83,6 @@ if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
 
 ################################################################################
 # Trim adapters from raw SRA files
-
 ## Run TrimGalore! in paired-end mode
 if [[ ${PAIRED} > 0 ]] && \
    [[ ${SINGLE} = 0 ]]

@@ -28,15 +28,17 @@ fi
 
 # Make sure that rnaSPAdes is installed
 command -v rnaspades.py || \
-echo -e "ERROR: This script requires `rnaspades` but it could not found. \n" \
+{ echo -e "ERROR: This script requires `rnaspades` but it could not found. \n" \
         "Please install this application. \n" \
         "Exiting with error code 6..." >&2; exit 6
+}
 
 # Make sure that python3 is installed
 command -v python || \
-echo -e "ERROR: This script requires `python3` but it could not found. \n" \
+{ echo -e "ERROR: This script requires `python3` but it could not found. \n" \
         "Please install this application. \n" \
         "Exiting with error code 6..." >&2; exit 6
+}
 
 # Change to the working directory
 cd ${WORKING_DIR}

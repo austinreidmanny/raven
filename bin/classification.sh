@@ -20,16 +20,17 @@ fi
 
 # Make sure that DIAMOND is installed
 command -v diamond || \
-echo -e "ERROR: This script requires `diamond` but it could not found. \n" \
+{ echo -e "ERROR: This script requires `diamond` but it could not found. \n" \
         "Please install this application. \n" \
         "Exiting with error code 6..." >&2; exit 6
+}
 
 # Check for a DIAMOND database to use
 if [[ -z "${DIAMOND_DB_DIR}" ]] ; then
-  then echo -e "ERROR: Missing directory for Diamond database. \n" \
+   echo -e "ERROR: Missing directory for Diamond database. \n" \
                "Please specify this DIAMOND_DB_DIR value in the setup.sh " \
                "script"   >&2
-       exit 4
+   exit 4
 fi
 
 # Change to the working directory
@@ -59,8 +60,8 @@ blastx \
 --outfmt 102 \
 --max-hsps 1 \
 --top 1 \
---block-size 5 \
---index-chunks 2 \
+--block-size 20 \
+--index-chunks 1 \
 --tmpdir ${TEMP_DIR}
 ################################################################################
 
