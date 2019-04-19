@@ -142,7 +142,6 @@ ${BLAST_TYPE} \
 -query ${VIRUS_QUERY} \
 -out ${SAMPLES}/blastn_vdb.${SAMPLES}.${BLAST_NAME_VIRUS_QUERY}.txt \
 -outfmt "6 qseqid evalue sseqid sseq" \
-#-num_threads 4 \
 -num_threads ${NUM_THREADS} \
 -evalue 1e-9 \
 -max_target_seqs 100000000
