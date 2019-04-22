@@ -97,6 +97,8 @@ if [[ -z ${E_VALUE} ]]; then
     E_VALUE="1e-9"
 fi
 
+# Set up number of cores to use (use all available)
+NUM_THREADS=`nproc`
 ################################################################################
 # CREATE DIRECTORIES AND PREPARE NAMES FOR BLAST
 ################################################################################
@@ -140,7 +142,7 @@ ${BLAST_TYPE} \
 -query ${VIRUS_QUERY} \
 -out ${SAMPLES}/blastn_vdb.${SAMPLES}.${BLAST_NAME_VIRUS_QUERY}.txt \
 -outfmt "6 qseqid evalue sseqid sseq" \
--num_threads 8 \
+-num_threads ${NUM_THREADS} \
 -evalue 1e-9 \
 -max_target_seqs 100000000
 
