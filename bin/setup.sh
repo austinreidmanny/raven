@@ -30,7 +30,8 @@ fi
 ###############################################################################
 # Customize the paths for Home, Working, Temp, and Final directories #
 ###############################################################################
-export HOME_DIR=`pwd`
+CURRENT_HOME_DIR=`pwd` # this only gets called once, so HOME_DIR won't change again
+export HOME_DIR=${CURRENT_HOME_DIR}
 export WORKING_DIR="/n/scratch2/am704/nibert/${PROJECT}/"
 export TEMP_DIR="/n/scratch2/am704/tmp/${PROJECT}/${SAMPLES}/"
 export FINAL_DIR="/n/data1/hms/mbib/nibert/austin/${PROJECT}/"
