@@ -23,14 +23,14 @@ if [[ -z "${SAMPLES}" ]] ;
   exit 1
 fi
 
+# Change to the working directory
+cd ${WORKING_DIR}
+
 # Check to make sure there is a DIAMOND results file to read from
 if [[ ! -f analysis/diamond/${SAMPLES}.nr.diamond.txt ]] ;
 then echo -e "ERROR: No DIAMOND results file found. \n" \
              "Exiting with error code 7 ..." >&2; exit 7
 fi
-
-# Change to the working directory
-cd ${WORKING_DIR}
 ###############################################################################
 
 ################################################################################
