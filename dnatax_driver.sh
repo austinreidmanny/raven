@@ -1,10 +1,8 @@
 #!/bin/bash
 
-# no SBATCH commands needed b/c this will just run briefly to launch the modules
-
-################################################################################
-# Objective
-################################################################################
+#==================================================================================================#
+# DNAtax
+#==================================================================================================#
 # This pipeline is be the driver script for DNAtax using the SLURM jobs manager
 # Run this interactively by providing -p PROJECT & -s SRAaccs (full usage below)
 #
@@ -13,100 +11,145 @@
 # each sequence, translates these calls from NCBI TaxonIDs to full taxonomic
 # lineages, extracts the viral sequences and saves them to its own FASTA file,
 # and saves the results to a final permanent directory and cleans up.
-#
-# Can customize the last code block to run the just tasks you'd like
-################################################################################
+#==================================================================================================#
 
-################################################################################
-# Error checking code to make sure the pipeline is called correctly (don't edit)
-################################################################################
-# Set up a usage statement in case this program is called incorrectly
-usage() { echo -e "ERROR: Missing project and/or sample names. \n" \
-              "Make sure to provide a project name, \n" \
-              "and one (or more) SRA run numbers separated by commas \n" \
-              "Usage: $0 -p PROJECT -s SRR10001,SRR10002,SRR..." >&2; exit 1; }
+function usage() {
+    #==== FUNCTION ================================================================================#
+    #        NAME: usage
+    # DESCRIPTION: setup a usage statement that will inform the user how to correctly invoke the
+    #              program
+    #==============================================================================================#
 
-# Make sure the pipeline is invoked correctly, with project and sample names
-while getopts "p:s:" arg; do
-	case ${arg} in
-		p ) # Take in the project name
-		  PROJECT=${OPTARG}
-			;;
-		s ) # Take in the sample name(s)
-      set -f
-      IFS=","
-      ALL_SAMPLES=(${OPTARG}) # call this when you want every individual sample
-      ;;
+    echo -e "ERROR: Missing project and/or sample names. \n" \
+            "Make sure to provide a project name, \n" \
+            "and one (or more) SRA run numbers separated by commas \n" \
+            "Usage: $0 -p PROJECT -s SRR10001,SRR10002,SRR..." >&2
+            exit 1;
+}
 
-		* ) # Display help
-		  usage
-			;;
-	esac
-done
-shift $((OPTIND-1))
+function read_user_parameters() {
+    #==== FUNCTION ================================================================================#
+    #        NAME: read_user_parameters
+    # DESCRIPTION: take in the project name and SRA accession numbers provided by user and make sure
+    #              the pipeline is invoked correctly
+    #==============================================================================================#
 
-# Retrieve last sample using older but cross-platform compatible BASH notation
-LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
+    # Make sure the pipeline is invoked correctly, with project and sample names
+    while getopts "p:s:" arg; do
+    	case ${arg} in
+    		p ) # Take in the project name
+    		    PROJECT=${OPTARG}
+    			    ;;
 
-# Create a variable that other parts of this pipeline can use mostly for naming
-SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
+    		s ) # Take in the sample name(s)
+                set -f
+                IFS=","
+                ALL_SAMPLES=(${OPTARG}) # call this when you want every individual sample
+                    ;;
 
-# Reset global expansion
-set +f
+    		* ) # Display help
+    		    usage
+    		     	;;
+    	esac
+    done
+    shift $((OPTIND-1))
+}
 
-# If the pipeline is not called correctly, tell that to the user and exit
-if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ; then
-	usage
-fi
-################################################################################
+function process_names() {
+    #==== FUNCTION ================================================================================#
+    #        NAME: process_names
+    # DESCRIPTION: use the user-provided parameters above to create variable names that can be
+    #              called in the rest of the pipeline
+    #==============================================================================================#
 
-################################################################################
-# Print the project name and sample numbers to the screen (don't edit)
-################################################################################
-echo "PROJECT name: ${PROJECT}"
-echo "SRA sample accessions: ${SAMPLES}"
+    # Retrieve name of the last sample (uses  older but cross-platform compatible BASH notation)
+    LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
 
-# Make these available to all subsequent scripts
-export PROJECT
-export SAMPLES
-################################################################################
+    # Create a variable that other parts of this pipeline can use mostly for naming
+    SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
 
-################################################################################
-# Launch the pipeline scripts (CAN CONFIGURE!)
-################################################################################
-# Can customize, can run the indiviudal modules you need or can run all of them
-# Note: setup.sh is basically required
+    # Reset global expansion [had to change to read multiple sample names]
+    set +f
 
-# Launch the setup script
-sbatch -p short --mem 2GB -c 1 -t 00-00:05 bin/setup.sh
-echo "Launched setup.sh script"
+    # If the pipeline is not called correctly, tell that to the user and exit
+    if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ; then
+    	usage
+    fi
 
-# Launch the script that downloads the SRA files from NCBI
-sbatch -p short --mem 50GB -c 1 -t 00-01:00 bin/download_sra.sh
-echo "Launched download_sra.sh"
+    # As a check to the user, print the project name and sample numbers to the screen
+    echo "PROJECT name: ${PROJECT}"
+    echo "SRA sample accessions: ${SAMPLES}"
 
-# Launch the adapter trimming script
-sbatch -p short --mem 50GB -c 1 -t 00-02:00 bin/adapter_trimming.sh
-echo "Launched adapter_trimming.sh"
+    # Make these available to subsequent child scripts
+    export PROJECT
+    export SAMPLES
+}
 
-# Launch the de novo assembly scripts
-export MAX_MEM="50" # will be referenced directly by the assembly program
-sbatch -p short --mem ${MAX_MEM}GB -c 6 -t 00-11:59 bin/de_novo_assembly.sh
-echo "Launched de_novo_assembly.sh"
+#==================================================================================================#
+# Run the initial setup steps
+read_user_parameters
+process_names
+#==================================================================================================#
 
-# Launch the taxonomic classification script
-sbatch -p medium --mem 50GB -c 6 -t 01-00:00 bin/classification.sh
-echo "Launched classification.sh"
+function setup_project_stucture() {
+    # Launch the setup script
+    echo "Launched setup.sh script"
+    bin/setup.sh
+}
 
-# Launch the script that converts NCBI taxonomy IDs to full taxonomic lineages
-sbatch -p short --mem 2GB -c 1 -t 00-01:00 bin/fetch_taxonomy.sh
-echo "Launched fetch_taxonomy.sh"
+function download_sra() {
+    # Launch the script that downloads the SRA files from NCBI
+    echo "Launched download_sra.sh"
+    bin/download_sra.sh
+}
 
-# Launch the script that extracts viral sequences from all the assembled contigs
-sbatch -p short --mem 2GB -c 1 -t 00-00:30 bin/extract_viral.sh
-echo "Launched extract_viral.sh"
+function adapter_trimming() {
+    # Launch the adapter trimming script
+    bin/adapter_trimming.sh
+}
 
-# Launch the final save and cleanup script
-sbatch -p short --mem 8GB -c 1 -t 00-02:00 bin/cleanup.sh
-echo "Launched cleanup.sh"
-################################################################################
+function de_novo_assembly() {
+    # Launch the de novo assembly scripts
+    echo "Launched de_novo_assembly.sh"
+    export MAX_MEM="50" # will be referenced directly by the assembly program
+    bin/de_novo_assembly.sh
+}
+
+function classification() {
+    # Launch the taxonomic classification script
+    echo "Launched classification.sh"
+    bin/classification.sh
+}
+
+function taxonomy() {
+    # Launch the script that converts NCBI taxonomy IDs to full taxonomic lineages
+    echo "Launched fetch_taxonomy.sh"
+    bin/fetch_taxonomy.sh
+}
+
+function extract_viral() {
+    # Launch the script that extracts viral sequences from all the assembled contigs
+    echo "Launched extract_viral.sh"
+    bin/extract_viral.sh
+}
+
+function cleanup() {
+    # Launch the final save and cleanup script
+    echo "Launched cleanup.sh"
+    bin/cleanup.sh
+}
+
+#==================================================================================================#
+# Run the pipeline
+#==================================================================================================#
+
+setup_project_stucture
+download_sra
+adapter_trimming
+de_novo_assembly
+classification
+taxonomy
+extract_viral
+cleanup
+
+#==================================================================================================#
