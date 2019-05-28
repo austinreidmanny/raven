@@ -214,7 +214,7 @@ function download_sra() {
 
     ################################################################################################
     # Download fastq files from the SRA
-    for SAMPLE in ${SAMPLES}
+    for SAMPLE in ${SAMPLES[@]}
        do \
           fasterq-dump \
           --split-3 \
