@@ -35,51 +35,49 @@ function usage() {
             "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
 }
 
-#==============================================================================================#
+#==================================================================================================#
 # Make sure the pipeline is invoked correctly, with project and sample names
-#==============================================================================================#
-while getopts "p:s:l:m:" arg;
-    do
-    	case ${arg} in
-    		p ) # Take in the project name
-    		    PROJECT=${OPTARG}
-    			    ;;
+#==================================================================================================#
+    while getopts "p:s:l:m:" arg;
+        do
+        	case ${arg} in
+        		p ) # Take in the project name
+        		    PROJECT=${OPTARG}
+        			    ;;
 
-    		s ) # Take in the sample name(s)
-                set -f
-                IFS=","
-                ALL_SAMPLES=(${OPTARG}) # call this when you want every individual sample
-                    ;;
+        		s ) # Take in the sample name(s)
+                    set -f
+                    IFS=","
+                    ALL_SAMPLES=(${OPTARG}) # call this when you want every individual sample
+                        ;;
 
-            l ) # Take in the library type ('paired' or 'single')
-              LIB_TYPE=${OPTARG}
-              if [[ ${LIB_TYPE} == "paired" ]]; then
-                PAIRED=1; SINGLE=0;
-              elif [[ ${LIB_TYPE} == "single" ]]; then
-                PAIRED=0; SINGLE=1
-              else
-                echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
-                exit 3;
-              fi;
-                    ;;
+                l ) # Take in the library type ('paired' or 'single')
+                  LIB_TYPE=${OPTARG}
+                  if [[ ${LIB_TYPE} == "paired" ]]; then
+                    PAIRED=1; SINGLE=0;
+                  elif [[ ${LIB_TYPE} == "single" ]]; then
+                    PAIRED=0; SINGLE=1
+                  else
+                    echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
+                    exit 3;
+                  fi;
+                        ;;
 
-            m ) # set max memory to use (in GB; if any letters are entered, discard those)
-                MEMORY_ENTERED=${OPTARG}
-                MEMORY_TO_USE=$(echo $MEMORY_ENTERED | sed 's/[^0-9]*//g')
-                    ;;
+                m ) # set max memory to use (in GB; if any letters are entered, discard those)
+                    MEMORY_ENTERED=${OPTARG}
+                    MEMORY_TO_USE=$(echo $MEMORY_ENTERED | sed 's/[^0-9]*//g')
+                        ;;
 
-            * ) # Display help
-    		    usage
-    		     	;;
-    	esac
-    done; shift $(( OPTIND-1 ))
+                * ) # Display help
+        		    usage
+        		     	;;
+        	esac
+        done; shift $(( OPTIND-1 ))
 
-function process_names() {
-    #==== FUNCTION ================================================================================#
-    #        NAME: process_names
-    # DESCRIPTION: use the user-provided parameters above to create variable names that can be
-    #              called in the rest of the pipeline
-    #==============================================================================================#
+#==================================================================================================#
+# Process names: use the user-provided parameters above to create variable names that can be
+#                called in the rest of the pipeline
+#==================================================================================================#
 
     # If the mandatory parameters (project and SRA accs) aren't provided, tell that to the user & exit
     if [[ -z "${PROJECT}" ]]  || [[ -z "${ALL_SAMPLES}" ]] ; then
@@ -95,12 +93,13 @@ function process_names() {
     # Reset global expansion [had to change to read multiple sample names]
     set +f
 
+    #==============================================================================================#
     # Set up number of CPUs to use and RAM
     #==============================================================================================#
     # CPUs (aka threads aka processors aka cores):
     #   If 8 CPUs were used, BLAST fails & gives Segmentation Fault. Error stopped if <= 4 CPUs are used
     #   Strategy: Use up to 4 CPUs, or maximum available if less than 4 CPUs available
-    #==============================================================================================#
+
     # Use `nproc` if installed (Linux or MacOS with gnu-core-utils); otherwise use `systctl`
     { \
         command -v nproc > /dev/null && \
@@ -113,7 +112,6 @@ function process_names() {
         echo "Number of processors available (according to sysctl): ${NUM_THREADS}";
     }
     #==============================================================================================#
-
     # Set memory usage to 16GB if none given by user
     if [[ -z ${MEMORY_TO_USE} ]]; then
         echo "No memory limit set by user. Defaulting to 16GB"
@@ -123,12 +121,12 @@ function process_names() {
     # As a check to the user, print the project name and sample numbers to the screen
     echo "PROJECT name: ${PROJECT}"
     echo "SRA sample accessions: ${SAMPLES}"
-}
+#==================================================================================================#
 
-function setup_project_stucture() {
-    ###############################################################################
-    # Set up directory structure, as such
-    ###############################################################################
+#==================================================================================================#
+# Set up project directory structure
+#==================================================================================================#
+
     #   project-name/
     #     |_ data/
     #     |_ analysis/
@@ -138,15 +136,14 @@ function setup_project_stucture() {
     # Will allocate specific temp space that is deleted at end of job
     # Will save final results in a permanent space
 
-    ###############################################################################
     # Customize the paths for Home, Working, Temp, and Final directories #
-    ###############################################################################
+    #==============================================================================================#
     export HOME_DIR=`pwd`
     export WORKING_DIR="/n/scratch2/am704/nibert/${PROJECT}/"
     export TEMP_DIR="/n/scratch2/am704/tmp/${PROJECT}/${SAMPLES}/"
     export FINAL_DIR="/n/data1/hms/mbib/nibert/austin/${PROJECT}/"
     export DIAMOND_DB_DIR="/n/data1/hms/mbib/nibert/austin/diamond/nr"
-    ###############################################################################
+    #==============================================================================================#
 
     # Create these directories
     mkdir -p ${WORKING_DIR}
@@ -188,7 +185,7 @@ function setup_project_stucture() {
 
     # Setup script has finished
     echo "Setup complete"
-}
+#==================================================================================================#
 
 function download_sra() {
     ################################################################################################
@@ -251,6 +248,8 @@ function download_sra() {
               exit 2
            fi; done
    fi
+
+   echo "finished downloading SRA files"
 }
 
 function adapter_trimming() {
@@ -693,8 +692,6 @@ function cleanup() {
 #==================================================================================================#
 # Run the pipeline
 #==================================================================================================#
-process_names
-setup_project_stucture
 download_sra
 adapter_trimming
 de_novo_assembly
