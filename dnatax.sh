@@ -117,7 +117,7 @@ function process_names() {
     #==============================================================================================#
 
     # Retrieve name of the last sample (uses  older but cross-platform compatible BASH notation)
-    LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
+    LAST_SAMPLE=(${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]})
 
     # Create a variable that other parts of this pipeline can use mostly for naming
     SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
