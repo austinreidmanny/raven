@@ -33,9 +33,9 @@ function usage() {
                   "-l (library type of the reads; 'paired' or 'single'; [default=auto determine]) " \
                   "-m (maximum amount of memory to use [in GB]; [default=16] ) \n" \
 
-                "Example of a complex run: \n" \
-                "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30\n\n" \
-                "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
+            "Example of a complex run: \n" \
+            "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30\n\n" \
+            "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
 }
 
 function read_user_parameters() {
@@ -116,8 +116,17 @@ function process_names() {
     #              called in the rest of the pipeline
     #==============================================================================================#
 
+    # If the mandatory parameters (project and SRA accs) aren't provided, tell that to the user & exit
+    if [[ -z "${PROJECT}" ]] ; then
+     usage
+    fi
+
+    if [[ ! -z "${ALL_SAMPLES}" ]] ; then
+     usage
+    fi
+
     # Retrieve name of the last sample (uses  older but cross-platform compatible BASH notation)
-    LAST_SAMPLE=(${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]})
+    LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
 
     # Create a variable that other parts of this pipeline can use mostly for naming
     SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
