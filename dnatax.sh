@@ -197,8 +197,8 @@ function download_sra() {
 
     ################################################################################################
     # Ensure that the necessary software is installed
-    command -v fasterq-dump || \
-    echo -e "ERROR: This script requires `fasterq-dump` but it could not found. \n" \
+    command -v fasterq-dump >&2 || \
+    echo -e "ERROR: This script requires 'fasterq-dump' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
     ################################################################################################
@@ -269,12 +269,12 @@ function adapter_trimming() {
     ################################################################################################
     # Ensure that the necessary software is installed
     command -v python2 || \
-    echo -e "ERROR: This script requires `python2` but it could not found. \n" \
+    echo -e "ERROR: This script requires 'python2' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
 
     command -v trim_galore || \
-    echo -e "ERROR: This script requires `trim_galore` but it could not found. \n" \
+    echo -e "ERROR: This script requires 'trim_galore' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
     ################################################################################################
@@ -347,13 +347,13 @@ function de_novo_assembly() {
 
     # Make sure that rnaSPAdes is installed
     command -v rnaspades.py || \
-    echo -e "ERROR: This script requires `rnaspades` but it could not found. \n" \
+    echo -e "ERROR: This script requires 'rnaspades' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
 
     # Make sure that python3 is installed
     command -v python3 || \
-    echo -e "ERROR: This script requires `python3` but it could not found. \n" \
+    echo -e "ERROR: This script requires 'python3' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
     ################################################################################
@@ -496,7 +496,7 @@ function yaml_spades_pairedreads() {
 function classification() {
     # Make sure that DIAMOND is installed
     command -v diamond || \
-    echo -e "ERROR: This script requires `diamond` but it could not found. \n" \
+    echo -e "ERROR: This script requires 'diamond' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
 
@@ -588,7 +588,7 @@ function extract_viral() {
     ###############################################################################
     # Make sure that seqtk is installed
     command -v seqtk || \
-    echo -e "ERROR: This script requires the tool `seqtk` but could not found. \n" \
+    echo -e "ERROR: This script requires the tool 'seqtk' but could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
 
