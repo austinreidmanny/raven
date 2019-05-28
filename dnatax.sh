@@ -195,9 +195,11 @@ function download_sra() {
     ################################################################################################
     # Ensure that the necessary software is installed
     command -v fasterq-dump >&2 || \
+    {
     echo -e "ERROR: This script requires 'fasterq-dump' but it could not found. \n" \
             "Please install this application. \n" \
-            "Exiting with error code 6..." >&2; exit 6
+            "Exiting with error code 6..." >&2 && exit 6
+    }
     ################################################################################################
 
     ################################################################################################
