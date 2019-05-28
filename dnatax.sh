@@ -35,8 +35,7 @@ function usage() {
 
                 "Example of a complex run: \n" \
                 "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30\n\n" \
-                "Exiting program. Please retry with corrected parameters..." >&2; exit 1; }
-
+                "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
 }
 
 function read_user_parameters() {
