@@ -23,30 +23,23 @@ function usage() {
     #              program
     #==============================================================================================#
 
-    echo -e "ERROR: Missing project and/or sample names. \n" \
+    echo -e "\nERROR: Missing project and/or sample names. \n" \
             "Make sure to provide a project name, \n" \
-            "one (or more) SRA run numbers separated by commas, \n" \
-            "and, optionally, library type as either 'paired' or 'single' \n\n" \
-            "Usage: $0 -p PROJECT -s SRR10001,SRR10002,SRR..." >&2
-
+            "one (or more) SRA run numbers separated by commas \n\n" \
+            "Usage: $0 -p PROJECT -s SRR10001,SRR10002,SRR..." \
             "Optional parameters: \n" \
-                  "-l (library type of the reads; 'paired' or 'single'; [default=auto determine]) " \
+                  "-l (library type of the reads; 'paired' or 'single'; [default=auto determine]) \n" \
                   "-m (maximum amount of memory to use [in GB]; [default=16] ) \n" \
-
             "Example of a complex run: \n" \
             "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30\n\n" \
             "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
 }
 
-function read_user_parameters() {
-    #==== FUNCTION ================================================================================#
-    #        NAME: read_user_parameters
-    # DESCRIPTION: take in the project name and SRA accession numbers provided by user and make sure
-    #              the pipeline is invoked correctly
-    #==============================================================================================#
-
-    # Make sure the pipeline is invoked correctly, with project and sample names
-    while getopts "p:s:l:" arg; do
+#==============================================================================================#
+# Make sure the pipeline is invoked correctly, with project and sample names
+#==============================================================================================#
+while getopts "p:s:l:m:" arg;
+    do
     	case ${arg} in
     		p ) # Take in the project name
     		    PROJECT=${OPTARG}
@@ -79,35 +72,7 @@ function read_user_parameters() {
     		    usage
     		     	;;
     	esac
-    done
-    shift $((OPTIND-1))
-
-    ################################################################################################
-    # Set up number of CPUs to use and RAM
-    ################################################################################################
-    # CPUs (aka threads aka processors aka cores):
-    #   If 8 CPUs were used, BLAST fails & gives Segmentation Fault. Error stopped if <= 4 CPUs are used
-    #   Strategy: Use up to 4 CPUs, or maximum available if less than 4 CPUs available
-
-    # Use `nproc` if installed (Linux or MacOS with gnu-core-utils); otherwise use `systctl`
-    { \
-        command -v nproc > /dev/null && \
-        NUM_THREADS=`nproc` && \
-        echo "Number of processors available (according to nproc): ${NUM_THREADS}"; \
-    } || \
-    { \
-        command -v sysctl > /dev/null && \
-        NUM_THREADS=`sysctl -n hw.ncpu` && \
-        echo "Number of processors available (according to sysctl): ${NUM_THREADS}";
-    }
-
-    # Set memory usage to 16GB if none given by user
-    if [[ -z ${MEMORY_TO_USE} ]]; then
-        echo "No memory limit set by user. Defaulting to 16GB"
-        MEMORY_TO_USE="16"
-    fi
-    ###################################################################################################
-}
+    done; shift $(( OPTIND-1 ))
 
 function process_names() {
     #==== FUNCTION ================================================================================#
@@ -117,11 +82,7 @@ function process_names() {
     #==============================================================================================#
 
     # If the mandatory parameters (project and SRA accs) aren't provided, tell that to the user & exit
-    if [[ -z "${PROJECT}" ]] ; then
-     usage
-    fi
-
-    if [[ ! -z "${ALL_SAMPLES}" ]] ; then
+    if [[ -z "${PROJECT}" ]]  || [[ -z "${ALL_SAMPLES}" ]] ; then
      usage
     fi
 
@@ -134,25 +95,35 @@ function process_names() {
     # Reset global expansion [had to change to read multiple sample names]
     set +f
 
-    # If the pipeline is not called correctly, tell that to the user and exit
-    if [[ -z "${PROJECT}" ]] || [[ -z "${SAMPLES}" ]] ; then
-    	usage
+    # Set up number of CPUs to use and RAM
+    #==============================================================================================#
+    # CPUs (aka threads aka processors aka cores):
+    #   If 8 CPUs were used, BLAST fails & gives Segmentation Fault. Error stopped if <= 4 CPUs are used
+    #   Strategy: Use up to 4 CPUs, or maximum available if less than 4 CPUs available
+    #==============================================================================================#
+    # Use `nproc` if installed (Linux or MacOS with gnu-core-utils); otherwise use `systctl`
+    { \
+        command -v nproc > /dev/null && \
+        NUM_THREADS=`nproc` && \
+        echo "Number of processors available (according to nproc): ${NUM_THREADS}"; \
+    } || \
+    { \
+        command -v sysctl > /dev/null && \
+        NUM_THREADS=`sysctl -n hw.ncpu` && \
+        echo "Number of processors available (according to sysctl): ${NUM_THREADS}";
+    }
+    #==============================================================================================#
+
+    # Set memory usage to 16GB if none given by user
+    if [[ -z ${MEMORY_TO_USE} ]]; then
+        echo "No memory limit set by user. Defaulting to 16GB"
+        MEMORY_TO_USE="16"
     fi
 
     # As a check to the user, print the project name and sample numbers to the screen
     echo "PROJECT name: ${PROJECT}"
     echo "SRA sample accessions: ${SAMPLES}"
-
-    # Make these available to subsequent child scripts
-    export PROJECT
-    export SAMPLES
 }
-
-#==================================================================================================#
-# Run the initial setup steps
-read_user_parameters
-process_names
-#==================================================================================================#
 
 function setup_project_stucture() {
     ###############################################################################
@@ -531,10 +502,9 @@ function classification() {
 
     # Check for a DIAMOND database to use
     if [[ -z "${DIAMOND_DB_DIR}" ]] ; then
-      then echo -e "ERROR: Missing directory for Diamond database. \n" \
-                   "Please specify this DIAMOND_DB_DIR value in the setup.sh " \
-                   "script"   >&2
-           exit 4
+        echo -e "ERROR: Missing directory for Diamond database. \n" \
+                "Please specify this DIAMOND_DB_DIR value in the setup function" >&2
+        exit 4
     fi
     ################################################################################
 
@@ -723,7 +693,7 @@ function cleanup() {
 #==================================================================================================#
 # Run the pipeline
 #==================================================================================================#
-
+process_names
 setup_project_stucture
 download_sra
 adapter_trimming
@@ -732,5 +702,4 @@ classification
 taxonomy
 extract_viral
 cleanup
-
 #==================================================================================================#
