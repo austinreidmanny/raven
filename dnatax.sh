@@ -97,20 +97,16 @@ function usage() {
     # Set up number of CPUs to use and RAM
     #==============================================================================================#
     # CPUs (aka threads aka processors aka cores):
-    #   If 8 CPUs were used, BLAST fails & gives Segmentation Fault. Error stopped if <= 4 CPUs are used
-    #   Strategy: Use up to 4 CPUs, or maximum available if less than 4 CPUs available
-
-    # Use `nproc` if installed (Linux or MacOS with gnu-core-utils); otherwise use `systctl`
-    { \
-        command -v nproc > /dev/null && \
+    ## Use `nproc` if installed (Linux or MacOS with gnu-core-utils); otherwise use `sysctl`
+    {   command -v nproc > /dev/null && \
         NUM_THREADS=`nproc` && \
         echo "Number of processors available (according to nproc): ${NUM_THREADS}"; \
-    } || \
-    { \
-        command -v sysctl > /dev/null && \
+        } \
+    || \
+    {   command -v sysctl > /dev/null && \
         NUM_THREADS=`sysctl -n hw.ncpu` && \
         echo "Number of processors available (according to sysctl): ${NUM_THREADS}";
-    }
+        }
     #==============================================================================================#
     # Set memory usage to 16GB if none given by user
     if [[ -z ${MEMORY_TO_USE} ]]; then
@@ -195,11 +191,10 @@ function download_sra() {
     ################################################################################################
     # Ensure that the necessary software is installed
     command -v fasterq-dump > /dev/null || \
-    {
-    echo -e "ERROR: This script requires 'fasterq-dump' but it could not found. \n" \
+    {   echo -e "ERROR: This script requires 'fasterq-dump' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2 && exit 6
-    }
+        }
     ################################################################################################
 
     ################################################################################################
@@ -238,7 +233,7 @@ function download_sra() {
         export PAIRED=0
         export SINGLE=0
 
-        for SAMPLE in ${SAMPLES}
+        for SAMPLE in ${ALL_SAMPLES}
            do if [[ -f data/raw-sra/${SAMPLE}.fastq ]]
               then let "SINGLE += 1"
            elif [[ -f data/raw-sra/${SAMPLE}_1.fastq ]] && \
@@ -270,14 +265,16 @@ function adapter_trimming() {
     ################################################################################################
     # Ensure that the necessary software is installed
     command -v python2 > /dev/null || \
-    echo -e "ERROR: This script requires 'python2' but it could not found. \n" \
+    {   echo -e "ERROR: This script requires 'python2' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
+        }
 
     command -v trim_galore > /dev/null || \
-    echo -e "ERROR: This script requires 'trim_galore' but it could not found. \n" \
+    {   echo -e "ERROR: This script requires 'trim_galore' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
+        }
     ################################################################################################
 
     ################################################################################################
@@ -348,15 +345,17 @@ function de_novo_assembly() {
 
     # Make sure that rnaSPAdes is installed
     command -v rnaspades.py > /dev/null || \
-    echo -e "ERROR: This script requires 'rnaspades' but it could not found. \n" \
+    {   echo -e "ERROR: This script requires 'rnaspades' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
+        }
 
     # Make sure that python3 is installed
     command -v python3 > /dev/null || \
-    echo -e "ERROR: This script requires 'python3' but it could not found. \n" \
+    {   echo -e "ERROR: This script requires 'python3' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
+        }
     ################################################################################
 
     ################################################################################
@@ -497,9 +496,10 @@ function yaml_spades_pairedreads() {
 function classification() {
     # Make sure that DIAMOND is installed
     command -v diamond > /dev/null || \
-    echo -e "ERROR: This script requires 'diamond' but it could not found. \n" \
+    {   echo -e "ERROR: This script requires 'diamond' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
+        }
 
     # Check for a DIAMOND database to use
     if [[ -z "${DIAMOND_DB_DIR}" ]] ; then
@@ -589,9 +589,10 @@ function extract_viral() {
     ###############################################################################
     # Make sure that seqtk is installed
     command -v seqtk > /dev/null || \
-    echo -e "ERROR: This script requires the tool 'seqtk' but could not found. \n" \
+    {   echo -e "ERROR: This script requires the tool 'seqtk' but could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
+        }
 
     # Check to make sure sample names are given
     if [[ -z "${SAMPLES}" ]] ;
