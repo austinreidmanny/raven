@@ -194,7 +194,7 @@ function download_sra() {
 
     ################################################################################################
     # Ensure that the necessary software is installed
-    command -v fasterq-dump >&2 || \
+    command -v fasterq-dump > /dev/null || \
     {
     echo -e "ERROR: This script requires 'fasterq-dump' but it could not found. \n" \
             "Please install this application. \n" \
@@ -269,12 +269,12 @@ function adapter_trimming() {
 
     ################################################################################################
     # Ensure that the necessary software is installed
-    command -v python2 || \
+    command -v python2 > /dev/null || \
     echo -e "ERROR: This script requires 'python2' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
 
-    command -v trim_galore || \
+    command -v trim_galore > /dev/null || \
     echo -e "ERROR: This script requires 'trim_galore' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
@@ -347,13 +347,13 @@ function de_novo_assembly() {
     ################################################################################################
 
     # Make sure that rnaSPAdes is installed
-    command -v rnaspades.py || \
+    command -v rnaspades.py > /dev/null || \
     echo -e "ERROR: This script requires 'rnaspades' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
 
     # Make sure that python3 is installed
-    command -v python3 || \
+    command -v python3 > /dev/null || \
     echo -e "ERROR: This script requires 'python3' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
@@ -496,7 +496,7 @@ function yaml_spades_pairedreads() {
 
 function classification() {
     # Make sure that DIAMOND is installed
-    command -v diamond || \
+    command -v diamond > /dev/null || \
     echo -e "ERROR: This script requires 'diamond' but it could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
@@ -588,7 +588,7 @@ function extract_viral() {
     # Error checking
     ###############################################################################
     # Make sure that seqtk is installed
-    command -v seqtk || \
+    command -v seqtk > /dev/null || \
     echo -e "ERROR: This script requires the tool 'seqtk' but could not found. \n" \
             "Please install this application. \n" \
             "Exiting with error code 6..." >&2; exit 6
