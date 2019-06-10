@@ -1,5 +1,15 @@
 #!/bin/bash
 
+#==============================================================================#
+# DNAtax setup
+#==============================================================================#
+# Objective: The purpose of this script is to set up the computational         #
+#            environment in a reproducibile and robust way. As DNAtax relies   #
+#            upon a multitude of software from various authors and channels,   #
+#            any discrepancies can lead to software breaking or giving         #
+#            conflicting results. This setup.sh script aims to prevent that.   #
+#==============================================================================#
+
 # Check to see if the Conda package manager is installed; if not, download & install it
 conda -V || {
   echo -e "DNAtax uses the program 'conda' in order to make sure all the necessary \n" \
@@ -25,10 +35,12 @@ conda config --add channels bioconda
 conda config --add channels conda-forge
 
 # Setup a new environment where all the software needed for dnatax will be installed
-conda create --name env_dnatax seqtk sra-tools spades diamond trim-galore
+conda create --name env_dnatax \
+seqtk=1.3 sra-tools=2.9.1_1 spades=3.13.1 diamond=0.9.21 trim-galore=0.6.2
+
+# Load this environment
 eval "$(conda shell.bash hook)"
 conda activate env_dnatax
-conda update --all
 
 # Tell the user that the setup has completed!
 echo -e "All necessary software as been successfully installed! \n" \
