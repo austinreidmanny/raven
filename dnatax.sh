@@ -40,12 +40,12 @@ function usage() {
 #==================================================================================================#
     while getopts "p:s:l:m:" arg;
         do
-        	case ${arg} in
-        		p ) # Take in the project name
-        		    PROJECT=${OPTARG}
+            case ${arg} in
+        	p ) # Take in the project name
+        	    PROJECT=${OPTARG}
         			    ;;
 
-        		s ) # Take in the sample name(s)
+        	s ) # Take in the sample name(s)
                     set -f
                     IFS=","
                     ALL_SAMPLES=(${OPTARG}) # call this when you want every individual sample
@@ -563,7 +563,7 @@ function classification() {
     --max-hsps 1 \
     --top 1 \
     --block-size ${BLOCK_SIZE_TO_USE} \
-    --index-chunks 1 \
+    --index-chunks 2 \
     --tmpdir ${TEMP_DIR}
     #==============================================================================================#
 
