@@ -12,9 +12,9 @@
 
 # Check to see if the Conda package manager is installed; if not, download & install it (check OS)
 conda -V || {
-  echo -e "DNAtax uses the program 'conda' in order to make sure all the necessary \n" \
+  echo -e "DNAtax uses the program 'conda' in order to make sure all the necessary " \
           "software is installed and up to date. \n\n" \
-          "Please confirm all of the following prompts..."
+          "Please confirm all of the following prompts... \n\n"
 
   if [[ "${OSTYPE}" == "linux-gnu" ]]; then
     wget -O - https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh > \
@@ -22,15 +22,15 @@ conda -V || {
     bash Miniconda3-latest-Linux-x86_64.sh
 
   elif [[ "${OSTYPE}" == "darwin"* ]]; then
-    curl -o Miniconda3-latest-MacOSX-x86_64.sh \
+    curl -s -o Miniconda3-latest-MacOSX-x86_64.sh \
       https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
     bash Miniconda3-latest-MacOSX-x86_64.sh
 
   fi
 
-  echo "Conda has successfully installed! Please exit this window, begin a new " \
-       "terminal session, and rerun this script ($0) to finish setup!"
-  exit 0
+  echo -e "Conda has successfully installed! To complete installation, this shell will \n" \
+          "restart itself, and finish the rest of the set up process."
+  exec bash -l
   }
 
 # Test to make sure that conda is installed correctly
