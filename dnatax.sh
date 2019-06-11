@@ -13,8 +13,24 @@
 # and saves the results to a final permanent directory and cleans up.
 #==================================================================================================#
 
+#==================================================================================================#
+# Initialize
+#==================================================================================================#
 # Stop program if it any component fails
 set -eo pipefail
+
+# Load environment containing all necessary software (prepared by the setup.sh script)
+eval "$(conda shell.bash hook)"
+conda activate env_dnatax
+
+# Customize the paths for Home, Working, Temp, and Final directories
+HOME_DIR=`pwd`
+WORKING_DIR="/n/scratch2/am704/nibert/${PROJECT}/"
+TEMP_DIR="/n/scratch2/am704/tmp/${PROJECT}/${SAMPLES}/"
+FINAL_DIR="/n/data1/hms/mbib/nibert/austin/${PROJECT}/"
+DIAMOND_DB_DIR="/n/data1/hms/mbib/nibert/austin/diamond/"
+DIAMOND_DB="${DIAMOND_DB_DIR}/nr"
+#==================================================================================================#
 
 function usage() {
     #==== FUNCTION ================================================================================#
@@ -131,15 +147,6 @@ function usage() {
     # Will run all the analysis in scratch space (maximum read/write speed)
     # Will allocate specific temp space that is deleted at end of job
     # Will save final results in a permanent space
-
-    # Customize the paths for Home, Working, Temp, and Final directories #
-    #==============================================================================================#
-    export HOME_DIR=`pwd`
-    export WORKING_DIR="/n/scratch2/am704/nibert/${PROJECT}/"
-    export TEMP_DIR="/n/scratch2/am704/tmp/${PROJECT}/${SAMPLES}/"
-    export FINAL_DIR="/n/data1/hms/mbib/nibert/austin/${PROJECT}/"
-    export DIAMOND_DB_DIR="/n/data1/hms/mbib/nibert/austin/diamond/nr"
-    #==============================================================================================#
 
     # Create these directories
     mkdir -p ${WORKING_DIR}
@@ -517,11 +524,23 @@ function classification() {
             "Exiting with error code 6..." >&2; exit 6
         }
 
-    # Check for a DIAMOND database to use
-    if [[ -z "${DIAMOND_DB_DIR}" ]] ; then
-        echo -e "ERROR: Missing directory for Diamond database. \n" \
-                "Please specify this DIAMOND_DB_DIR value in the setup function" >&2
-        exit 4
+    # Check for a DIAMOND database to use; if none exists, create one
+    if [[ -z "${DIAMOND_DB}" ]] ; then
+        echo -e "ERROR: Missing Diamond database. Downloading one now. May take a while. \n" \
+                "Otherwise, quit (CTRL+C) and specify this DIAMOND_DB value in the setup code block" >&2
+
+        # Download DIAMOND NR db and taxonomy files
+        mkdir -p ${TEMP_DIR}/diamond_db/
+        wget -O ${TEMP_DIR}/diamond_db/nr.gz ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz
+        wget -O ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
+        wget -O ${TEMP_DIR}/diamond_db/taxdmp.zip \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip
+
+        # Make DIAMOND db and point the directory variables Otherwise
+        diamond makedb --in ${TEMP_DIR}/diamond_db/nr.gz -d ${TEMP_DIR}/diamond_db/nr
+        DIAMOND_DB_DIR=${TEMP_DIR}/diamond_db/
+        DIAMOND_DB=${DIAMOND_DB_DIR}/nr
     fi
     #==============================================================================================#
 
@@ -556,7 +575,7 @@ function classification() {
     --verbose \
     --more-sensitive \
     --threads ${NUM_THREADS} \
-    --db ${DIAMOND_DB_DIR} \
+    --db ${DIAMOND_DB} \
     --query data/contigs/${SAMPLES}.contigs.fasta \
     --out analysis/diamond/${SAMPLES}.nr.diamond.txt \
     --outfmt 102 \
