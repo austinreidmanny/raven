@@ -10,13 +10,18 @@
 #            conflicting results. This setup.sh script aims to prevent that.   #
 #==============================================================================#
 
-# Check to see if the Conda package manager is installed; if not, download & install it
+# Check to see if the Conda package manager is installed; if not, download & install it (check OS)
 conda -V || {
   echo -e "DNAtax uses the program 'conda' in order to make sure all the necessary \n" \
           "software is installed and up to date. \n\n" \
           "Please confirm all of the following prompts..."
-  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-  bash Miniconda3-latest-Linux-x86_64.sh
+  if [[ "${OSTYPE}" == "linux-gnu" ]]; then
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh
+  elif [[ "${OSTYPE}" == "darwin"* ]]; then
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+    bash Miniconda3-latest-MacOSX-x86_64.sh
+  fi
   echo "Conda has successfully installed! Please exit this window, begin a new " \
        "terminal session, and rerun this script ($0) to finish setup!"
   exit 0
