@@ -15,13 +15,19 @@ conda -V || {
   echo -e "DNAtax uses the program 'conda' in order to make sure all the necessary \n" \
           "software is installed and up to date. \n\n" \
           "Please confirm all of the following prompts..."
+
   if [[ "${OSTYPE}" == "linux-gnu" ]]; then
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    wget -O - https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh > \
+      Miniconda3-latest-Linux-x86_64.sh
     bash Miniconda3-latest-Linux-x86_64.sh
+
   elif [[ "${OSTYPE}" == "darwin"* ]]; then
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+    curl -o Miniconda3-latest-MacOSX-x86_64.sh \
+      https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
     bash Miniconda3-latest-MacOSX-x86_64.sh
+
   fi
+
   echo "Conda has successfully installed! Please exit this window, begin a new " \
        "terminal session, and rerun this script ($0) to finish setup!"
   exit 0
