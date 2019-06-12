@@ -22,14 +22,6 @@ set -eo pipefail
 # Load environment containing all necessary software (prepared by the setup.sh script)
 eval "$(conda shell.bash hook)"
 conda activate env_dnatax
-
-# Customize the paths for Home, Working, Temp, and Final directories
-HOME_DIR=`pwd`
-WORKING_DIR="/n/scratch2/am704/nibert/${PROJECT}/"
-TEMP_DIR="/n/scratch2/am704/tmp/${PROJECT}/${SAMPLES}/"
-FINAL_DIR="/n/data1/hms/mbib/nibert/austin/${PROJECT}/"
-DIAMOND_DB_DIR="/n/data1/hms/mbib/nibert/austin/diamond/"
-DIAMOND_DB="${DIAMOND_DB_DIR}/nr"
 #==================================================================================================#
 
 function usage() {
@@ -39,17 +31,26 @@ function usage() {
     #              program
     #==============================================================================================#
 
-    echo -e "\nERROR: Missing project and/or sample names. \n" \
-            "Make sure to provide a project name, \n" \
-            "one (or more) SRA run numbers separated by commas \n\n" \
-            "Usage: $0 -p PROJECT -s SRR10001,SRR10002,SRR..." \
-            "Optional parameters: \n" \
-                  "-l (library type of the reads; 'paired' or 'single'; [default=auto determine]) \n" \
-                  "-m (maximum amount of memory to use [in GB]; [default=16] ) \n" \
-            "Example of a complex run: \n" \
-            "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30\n\n" \
-            "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
-}
+    echo -e "\n" \
+    "ERROR: Missing project and/or sample names. \n" \
+    "Make sure to provide a project name and one (or more) SRA run numbers separated by commas \n\n" \
+    "Usage: $0 -p PROJECT -s SRR10001,SRR10002,SRR..." \
+    "Optional parameters: \n" \
+        "-l (library type of the reads; 'paired' or 'single'; [default=auto determine]) \n" \
+        "-m (maximum amount of memory to use [in GB]; [default=16] ) \n" \
+        "-w (set the working directory, where all analysis will take place; [default=current directory, \n" \
+            "but a scratch directory with a lot of storage is recommended])" \
+        "-f (set the final directory, where all the files will be copied to the end [default=current directory]) \n" \
+        "-t (set the temporary directory, where the pipeline will dump all temp files [default='/tmp/dnatax/']"
+        "-h (set the home directory where DNAtax is located; [default=current directory, is recommended not to change]) \n" \
+        "-d (specify the full path to the DIAMOND database, including the db name - e.g., '/path/to/nr-database/nr' \n" \
+            "[default=none, will download all files to temp space and copy them to final directory at the end; NOTE: \n" \
+            "DNAtax requires a DIAMOND database, NCBI taxonmaps file, and NCBI protein2accessions file; \n" \
+            "These all must be located in the same directory as the DIAMOND database \n\n"
+    "Example of a complex run: \n" \
+    "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30 -w external_drive/storage/ -f projects/dnatax/final/ -t /tmp/ -d tools/diamond/nr \n\n" \
+    "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
+    }
 
 #==================================================================================================#
 # Make sure the pipeline is invoked correctly, with project and sample names
@@ -57,36 +58,57 @@ function usage() {
     while getopts "p:s:l:m:" arg;
         do
             case ${arg} in
-        	p ) # Take in the project name
-        	    PROJECT=${OPTARG}
-        			    ;;
+                p ) # Take in the project name
+                    PROJECT=${OPTARG}
+                    ;;
 
-        	s ) # Take in the sample name(s)
+                s ) # Take in the sample name(s)
                     set -f
                     IFS=","
                     ALL_SAMPLES=(${OPTARG}) # call this when you want every individual sample
-                        ;;
+                    ;;
 
                 l ) # Take in the library type ('paired' or 'single')
-                  LIB_TYPE=${OPTARG}
-                  if [[ ${LIB_TYPE} == "paired" ]]; then
-                    PAIRED=1; SINGLE=0;
-                  elif [[ ${LIB_TYPE} == "single" ]]; then
-                    PAIRED=0; SINGLE=1
-                  else
-                    echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
-                    exit 3;
-                  fi;
-                        ;;
+                    LIB_TYPE=${OPTARG}
+                    if [[ ${LIB_TYPE} == "paired" ]]; then
+                        PAIRED=1; SINGLE=0;
+                    elif [[ ${LIB_TYPE} == "single" ]]; then
+                        PAIRED=0; SINGLE=1
+                    else
+                        echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
+                        exit 3;
+                    fi;
+                    ;;
 
                 m ) # set max memory to use (in GB; if any letters are entered, discard those)
                     MEMORY_ENTERED=${OPTARG}
                     MEMORY_TO_USE=$(echo $MEMORY_ENTERED | sed 's/[^0-9]*//g')
-                        ;;
+                    ;;
+
+                w ) # set working directory
+                    WORKING_DIR=${OPTARG}
+                    ;;
+
+                f ) # set final directory
+                    FINAL_DIR=${OPTARG}
+                    ;;
+
+                t ) # set temp directory
+                    TEMP_DIR=${OPTARG}
+                    ;;
+
+                h ) # set home directory, where dnatax code is located; recommandation: don't change
+                    HOME_DIR=${OPTARG}
+                    ;;
+
+                d ) # set path to Diamond database
+                    DIAMOND_DB=${OPTARG}
+                    DIAMOND_DB_DIR=$(dirname "${DIAMOND_DB}")
+                    ;;
 
                 * ) # Display help
         		    usage
-        		     	;;
+        		    ;;
         	esac
         done; shift $(( OPTIND-1 ))
 
@@ -109,23 +131,40 @@ function usage() {
     # Reset global expansion [had to change to read multiple sample names]
     set +f
 
+    # Check to see if all of the various directories were provided; if not, set the defaults
+    if [[ -z "${HOME_DIR}" ]] ; then
+        HOME_DIR="./"
+    fi
+
+    if [[ -z "${WORKING_DIR}" ]] ; then
+        WORKING_DIR="./dnatax/"
+    fi
+
+    if [[ -z "${FINAL_DIR}" ]] ; then
+        FINAL_DIR="./dnatax/"
+    fi
+
+    if [[ -z "${TEMP_DIR}" ]] ; then
+        TEMP_DIR="/tmp/dnatax/${SAMPLES}"
+    fi
+
     #==============================================================================================#
     # Set up number of CPUs to use and RAM
     #==============================================================================================#
     # CPUs (aka threads aka processors aka cores):
     ## Use `nproc` if installed (Linux or MacOS with gnu-core-utils); otherwise use `sysctl`
     {   command -v nproc > /dev/null && \
-        NUM_THREADS=`nproc` && \
+        NUM_THREADS=$(nproc) && \
         echo "Number of processors available (according to nproc): ${NUM_THREADS}"; \
         } \
     || \
     {   command -v sysctl > /dev/null && \
-        NUM_THREADS=`sysctl -n hw.ncpu` && \
+        NUM_THREADS=$(sysctl -n hw.ncpu) && \
         echo "Number of processors available (according to sysctl): ${NUM_THREADS}";
         }
     #==============================================================================================#
     # Set memory usage to 16GB if none given by user
-    if [[ -z ${MEMORY_TO_USE} ]]; then
+    if [[ -z "${MEMORY_TO_USE}" ]]; then
         echo "No memory limit set by user. Defaulting to 16GB"
         MEMORY_TO_USE="16"
     fi
@@ -262,13 +301,6 @@ function adapter_trimming() {
     #==============================================================================================#
 
     #==============================================================================================#
-    # Load necessary software packages
-    module load gcc/6.2.0 >&2
-    module load python/2.7.12 >&2
-    module load trimgalore >&2
-    #==============================================================================================#
-
-    #==============================================================================================#
     # Ensure that the necessary software is installed
     command -v python2 > /dev/null || \
     {   echo -e "ERROR: This script requires 'python2' but it could not found. \n" \
@@ -336,13 +368,6 @@ function de_novo_assembly() {
     # This function will assemble long contiguous sequences (contigs) from the raw
     # raw reads from the FASTQ. These contigs will be much longer than the raw reads
     # and will more accurately reflect the input nucleic acids
-    #==============================================================================================#
-
-    #==============================================================================================#
-    # Load necessary software from the cluster; if not on the cluster, ensure that
-    # python3 is available to call (i.e. in your PATH)
-    module load gcc/6.2.0 1>&2
-    module load python/3.6.0 1>&2
     #==============================================================================================#
 
     #==============================================================================================#
@@ -517,6 +542,10 @@ function classification() {
     # DIAMOND_DB_DIR in the setup code block at the top.
     #==============================================================================================#
 
+    #==============================================================================================#
+    # Check that DIAMOND is installed, that the DIAMOND db is available, and that all required NCBI
+    # taxonomy files are downloaded and present in the same directory as the DIAMOND db
+    #==============================================================================================#
     # Make sure that DIAMOND is installed
     command -v diamond > /dev/null || \
     {   echo -e "ERROR: This script requires 'diamond' but it could not found. \n" \
@@ -524,24 +553,37 @@ function classification() {
             "Exiting with error code 6..." >&2; exit 6
         }
 
-    # Check for a DIAMOND database to use; if none exists, create one
-    if [[ -z "${DIAMOND_DB}" ]] ; then
-        echo -e "ERROR: Missing Diamond database. Downloading one now. May take a while. \n" \
-                "Otherwise, quit (CTRL+C) and specify this DIAMOND_DB value in the setup code block" >&2
+    # Check for a DIAMOND database to use; if not present, download NR fasta and make a DIAMOND db
+    if [[ ! -f "${DIAMOND_DB}" ]]; then
+
+       echo -e "\nERROR: Missing Diamond database. \n" \
+                "Downloading NCBI NR database and using it to make new DIAMOND db now. May take a while... \n" \
+                "Otherwise, quit (CTRL+C) and specify this DIAMOND_DB with the '-d' flag. \n\n" >&2
 
         # Download DIAMOND NR db and taxonomy files
         mkdir -p ${TEMP_DIR}/diamond_db/
         wget -O ${TEMP_DIR}/diamond_db/nr.gz ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz
-        wget -O ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
-            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
-        wget -O ${TEMP_DIR}/diamond_db/taxdmp.zip \
-            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip
 
-        # Make DIAMOND db and point the directory variables Otherwise
+        # Make DIAMOND db and point the directory variables to the new files
         diamond makedb --in ${TEMP_DIR}/diamond_db/nr.gz -d ${TEMP_DIR}/diamond_db/nr
-        DIAMOND_DB_DIR=${TEMP_DIR}/diamond_db/
-        DIAMOND_DB=${DIAMOND_DB_DIR}/nr
+        DIAMOND_DB_DIR="${TEMP_DIR}/diamond_db"
+        DIAMOND_DB="${DIAMOND_DB_DIR}/nr"
+        NEW_DIAMOND_DB="TRUE"
     fi
+
+    # Check for both required NCBI taxonomy files; if at least one isn't there, just download both
+    if [[ ! -f "${DIAMOND_DB_DIR}/prot.accession2taxid.gz" ]] || \
+       [[ ! -f "${DIAMOND_DB_DIR}/taxdmp.zip" ]]; then
+       echo -e "\nERROR: Necesary NCBI taxonomy files. Downloading them now. May take a while... \n" >&2
+
+       # Download DIAMOND NR db and taxonomy files
+       mkdir -p ${TEMP_DIR}/diamond_db/
+       wget -O ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+           ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
+       wget -O ${TEMP_DIR}/diamond_db/taxdmp.zip \
+           ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip
+    fi
+
     #==============================================================================================#
 
     #==============================================================================================#
@@ -555,21 +597,23 @@ function classification() {
     # Classify the contigs with Diamond
     #==============================================================================================#
 
-    #==============================================================================================#
     # A note on DIAMOND parameters
     #==============================================================================================#
-    # Main determinants of memory usage are index-chunks and block-size
-    # Index-chunks should be set to 1, and then block-size should be scaled to memory usage
-    # A conservative (read: safe) conversion is each block uses 10 GB RAM. If it cannot automatically
-    # scale this, it will default to a very small memory footprint that will work on 16GB system
+    # Main determinants of memory usage are index-chunks and block-size.
+    # Index-chunks should be set to 2 (good trade-off between speed & memory usage),
+    # and block-size should be scaled to memory usage.
+    # A conservative (read: safe) conversion is that each block uses 10 GB RAM.
+    # If there is an issue with determining the optimal block-size, it will default to a
+    # very small memory footprint that will work on 16GB system.
     #==============================================================================================#
 
-    {      # try to scale it with memory available
-           BLOCK_SIZE_TO_USE=$( expr ${MEMORY_TO_USE} / 10 )
-    } || { # if that fails, set it to a very low, safe block-size
-           BLOCK_SIZE_TO_USE=2
-    }
+    # try to scale it with memory available;  if that fails, set it to a very low, safe block-size
+    { BLOCK_SIZE_TO_USE=$( expr ${MEMORY_TO_USE} / 10 )
+        } &> /dev/null || \
+    { BLOCK_SIZE_TO_USE=2
+        }
 
+    # Run diamond
     diamond \
     blastx \
     --verbose \
@@ -713,6 +757,14 @@ function cleanup() {
     rsync -azv ${WORKING_DIR}/analysis/ ${FINAL_DIR}/analysis
     rsync -azv ${WORKING_DIR}/scripts/ ${FINAL_DIR}/scripts
     rsync -azv ${WORKING_DIR}/data/contigs/ ${FINAL_DIR}/data/contigs
+
+    # If DIAMOND database files had to be downloaded, copy those to a permanent directory too
+    if [[ ! -z "${NEW_DIAMOND_DB}" ]]; then
+        echo -e "Copying DIAMOND database & taxonomy files to permanent storage at ${FINAL_DIR}/scripts/diamond_db \n" \
+                "Next time you run dnatax, you may use these files with the flag '-d ${FINAL_DIR}/scripts/diamond_db/nr'"
+        mkdir -p ${FINAL_DIR}/scripts/diamond_db/
+        rsync -azv ${TEMP_DIR}/diamond_db/ ${FINAL_DIR}/scripts/diamond_db
+    fi
     #==============================================================================================#
 
     #==============================================================================================#
