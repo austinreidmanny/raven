@@ -41,12 +41,12 @@ function usage() {
         "-w (set the working directory, where all analysis will take place; [default=current directory, \n" \
             "but a scratch directory with a lot of storage is recommended])" \
         "-f (set the final directory, where all the files will be copied to the end [default=current directory]) \n" \
-        "-t (set the temporary directory, where the pipeline will dump all temp files [default='/tmp/dnatax/']"
+        "-t (set the temporary directory, where the pipeline will dump all temp files [default='/tmp/dnatax/'] \n" \
         "-h (set the home directory where DNAtax is located; [default=current directory, is recommended not to change]) \n" \
         "-d (specify the full path to the DIAMOND database, including the db name - e.g., '/path/to/nr-database/nr' \n" \
             "[default=none, will download all files to temp space and copy them to final directory at the end; NOTE: \n" \
             "DNAtax requires a DIAMOND database, NCBI taxonmaps file, and NCBI protein2accessions file; \n" \
-            "These all must be located in the same directory as the DIAMOND database \n\n"
+            "These all must be located in the same directory as the DIAMOND database \n\n" \
     "Example of a complex run: \n" \
     "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30 -w external_drive/storage/ -f projects/dnatax/final/ -t /tmp/ -d tools/diamond/nr \n\n" \
     "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
@@ -55,7 +55,7 @@ function usage() {
 #==================================================================================================#
 # Make sure the pipeline is invoked correctly, with project and sample names
 #==================================================================================================#
-    while getopts "p:s:l:m:" arg;
+    while getopts "p:s:l:m:w:f:t:h:d:" arg;
         do
             case ${arg} in
                 p ) # Take in the project name
