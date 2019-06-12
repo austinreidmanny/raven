@@ -22,6 +22,13 @@ set -eo pipefail
 # Load environment containing all necessary software (prepared by the setup.sh script)
 eval "$(conda shell.bash hook)"
 conda activate env_dnatax
+
+# Welcome user to DNAtax
+echo -e "\n ================================================================================\n" \
+           "Welcome to DNAtax! \n" \
+           "================================================================================\n" \
+           "Full source code & contact info available at github.com/austinreidmanny/dnatax  \n" \
+           "================================================================================\n"
 #==================================================================================================#
 
 function usage() {
@@ -133,7 +140,7 @@ function usage() {
 
     # Check to see if all of the various directories were provided; if not, set the defaults
     if [[ -z "${HOME_DIR}" ]] ; then
-        HOME_DIR="./"
+        HOME_DIR=$(pwd)
     fi
 
     if [[ -z "${WORKING_DIR}" ]] ; then
