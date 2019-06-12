@@ -19,9 +19,13 @@
 # Stop program if it any component fails
 set -eo pipefail
 
-# Load environment containing all necessary software (prepared by the setup.sh script)
+# Load environment containing all necessary software (prepared by the setup.sh script); if error, exit
 eval "$(conda shell.bash hook)"
-conda activate env_dnatax
+conda activate env_dnatax > /dev/null || {
+    echo -e "Could not activate the conda environment for dnatax." \
+            "Please fully run the setup.sh script, restart terminal, and try again."
+    exit 10 
+    }
 
 # Welcome user to DNAtax
 echo -e "\n ================================================================================\n" \
@@ -46,7 +50,7 @@ function usage() {
         "-l (library type of the reads; 'paired' or 'single'; [default=auto determine]) \n" \
         "-m (maximum amount of memory to use [in GB]; [default=16] ) \n" \
         "-w (set the working directory, where all analysis will take place; [default=current directory, \n" \
-            "but a scratch directory with a lot of storage is recommended])" \
+            "but a scratch directory with a lot of storage is recommended]) \n" \
         "-f (set the final directory, where all the files will be copied to the end [default=current directory]) \n" \
         "-t (set the temporary directory, where the pipeline will dump all temp files [default='/tmp/dnatax/'] \n" \
         "-h (set the home directory where DNAtax is located; [default=current directory, is recommended not to change]) \n" \
@@ -309,12 +313,6 @@ function adapter_trimming() {
 
     #==============================================================================================#
     # Ensure that the necessary software is installed
-    command -v python2 > /dev/null || \
-    {   echo -e "ERROR: This script requires 'python2' but it could not found. \n" \
-            "Please install this application. \n" \
-            "Exiting with error code 6..." >&2; exit 6
-        }
-
     command -v trim_galore > /dev/null || \
     {   echo -e "ERROR: This script requires 'trim_galore' but it could not found. \n" \
             "Please install this application. \n" \
