@@ -558,8 +558,9 @@ function classification() {
             "Exiting with error code 6..." >&2; exit 6
         }
 
-    # Check for a DIAMOND database to use; if not present, download NR fasta and make a DIAMOND db
-    if [[ ! -f "${DIAMOND_DB}" ]]; then
+    # Check that the DIAMOND database is functional
+    # if not present or if corrupt, download NCBI-NR fasta and make a DIAMOND db
+    diamond dbinfo -d ${DIAMOND_DB} || {
 
        echo -e "\nERROR: Missing Diamond database. \n" \
                 "Downloading NCBI NR database and using it to make new DIAMOND db now. May take a while... \n" \
@@ -574,7 +575,7 @@ function classification() {
         DIAMOND_DB_DIR="${TEMP_DIR}/diamond_db"
         DIAMOND_DB="${DIAMOND_DB_DIR}/nr"
         NEW_DIAMOND_DB="TRUE"
-    fi
+        }
 
     # Check for both required NCBI taxonomy files; if at least one isn't there, just download both
     if [[ ! -f "${DIAMOND_DB_DIR}/prot.accession2taxid.gz" ]] || \
