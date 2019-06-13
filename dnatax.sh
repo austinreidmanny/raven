@@ -570,8 +570,19 @@ function classification() {
         mkdir -p ${TEMP_DIR}/diamond_db/
         wget -O ${TEMP_DIR}/diamond_db/nr.gz ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz
 
+       # Download NCBI taxonomy files
+        wget -O ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
+        wget -O ${TEMP_DIR}/diamond_db/taxdmp.zip \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip
+
         # Make DIAMOND db and point the directory variables to the new files
-        diamond makedb --in ${TEMP_DIR}/diamond_db/nr.gz -d ${TEMP_DIR}/diamond_db/nr
+        diamond makedb \
+        --in ${TEMP_DIR}/diamond_db/nr.gz \
+        -d ${TEMP_DIR}/diamond_db/nr \
+        --taxonmap ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+        --taxonnodes ${TEMP_DIR}/diamond_db/taxdmp.zip
+        
         DIAMOND_DB_DIR="${TEMP_DIR}/diamond_db"
         DIAMOND_DB="${DIAMOND_DB_DIR}/nr"
         NEW_DIAMOND_DB="TRUE"
@@ -582,11 +593,10 @@ function classification() {
        [[ ! -f "${DIAMOND_DB_DIR}/taxdmp.zip" ]]; then
        echo -e "\nERROR: Necesary NCBI taxonomy files. Downloading them now. May take a while... \n" >&2
 
-       # Download DIAMOND NR db and taxonomy files
-       mkdir -p ${TEMP_DIR}/diamond_db/
-       wget -O ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+       # Download NCBI taxonomy files
+       wget -O ${DIAMOND_DB_DIR}/prot.accession2taxid.gz \
            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
-       wget -O ${TEMP_DIR}/diamond_db/taxdmp.zip \
+       wget -O ${DIAMOND_DB_DIR}/taxdmp.zip \
            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip
     fi
 
