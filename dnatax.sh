@@ -19,20 +19,20 @@
 # Stop program if it any component fails
 set -eo pipefail
 
-# Load environment containing all necessary software (prepared by the setup.sh script); if error, exit
-eval "$(conda shell.bash hook)"
-conda activate env_dnatax > /dev/null || {
-    echo -e "Could not activate the conda environment for dnatax." \
-            "Please fully run the setup.sh script, restart terminal, and try again."
-    exit 10 
-    }
-
 # Welcome user to DNAtax
 echo -e "\n ================================================================================\n" \
            "Welcome to DNAtax! \n" \
            "================================================================================\n" \
            "Full source code & contact info available at github.com/austinreidmanny/dnatax  \n" \
            "================================================================================\n"
+
+# Load environment containing all necessary software (prepared by the setup.sh script); if error, exit
+eval "$(conda shell.bash hook)"
+conda activate env_dnatax > /dev/null || {
+   echo -e "Could not activate the conda environment for dnatax." \
+           "Please fully run the setup.sh script, restart terminal, and try again."
+   exit 10
+   }
 #==================================================================================================#
 
 function usage() {
@@ -563,8 +563,10 @@ function classification() {
     diamond dbinfo -d ${DIAMOND_DB} || {
 
        echo -e "\nERROR: Missing Diamond database. \n" \
-                "Downloading NCBI NR database and using it to make new DIAMOND db now. May take a while... \n" \
-                "Otherwise, quit (CTRL+C) and specify this DIAMOND_DB with the '-d' flag. \n\n" >&2
+               "Downloading NCBI NR database and necessary NCBI taxonomy information, and using these \n" \
+               "to make new DIAMOND db now. May take a while... \n" \
+               "Otherwise, quit (CTRL+C) and specify the directory containing all 3 files (db, taxonnodes, taxonmaps)" \
+               "with the '-d' flag. \n\n" >&2
 
         # Download DIAMOND NR db and taxonomy files
         mkdir -p ${TEMP_DIR}/diamond_db/
@@ -582,22 +584,59 @@ function classification() {
         -d ${TEMP_DIR}/diamond_db/nr \
         --taxonmap ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
         --taxonnodes ${TEMP_DIR}/diamond_db/taxdmp.zip
-        
+
         DIAMOND_DB_DIR="${TEMP_DIR}/diamond_db"
         DIAMOND_DB="${DIAMOND_DB_DIR}/nr"
         NEW_DIAMOND_DB="TRUE"
         }
 
+    #==============================================================================================#
+    # A note about DIAMOND databases and taxonomy files
+    #==============================================================================================#
+    # If DIAMOND is run in taxonomy mode (102), working with a without the necessary NCBI taxonomy
+    # files without these files, DIAMOND will fail. However, DIAMOND does not provide a way to check
+    # whether or not a given database was built with this NCBI taxonomy info
+    #
+    # The only way I can think to deal with this is to check if the taxonomy files are available
+    # in the same directory as the DIAMOND db. If not, I will assume that the database was not built
+    # with those and thus will fail upon starting.
+
+    # With that assumption, if the taxonomy files are not avilable, I will just download the NCBI
+    # NR fasta, download the NCBI taxonomy info, and build a new database to use
+    #==============================================================================================#
+
     # Check for both required NCBI taxonomy files; if at least one isn't there, just download both
     if [[ ! -f "${DIAMOND_DB_DIR}/prot.accession2taxid.gz" ]] || \
        [[ ! -f "${DIAMOND_DB_DIR}/taxdmp.zip" ]]; then
-       echo -e "\nERROR: Necesary NCBI taxonomy files. Downloading them now. May take a while... \n" >&2
+       echo -e "\nERROR: Necesary NCBI taxonomy files were not found in the same directory as the \n" \
+               "DIAMOND database. This implies that the provided DIAMOND database was not built \n" \
+               "with the proper taxonomy information. Will default to the NCBI NR database. \n\n" \
+               "Downloading NCBI NR database and necessary NCBI taxonomy information, and using these \n" \
+               "to make new DIAMOND db now. May take a while... \n\n" \
+               "Otherwise, quit (CTRL+C) and specify the full path to the DIAMOND database with the '-d' flag \n" \
+               "and ensure that the taxonnodes and taxonmaps are present in the same directory." \
+               "\n\n" >&2
+
+        # Download DIAMOND NR db and taxonomy files
+        mkdir -p ${TEMP_DIR}/diamond_db/
+        wget -O ${TEMP_DIR}/diamond_db/nr.gz ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz
 
        # Download NCBI taxonomy files
-       wget -O ${DIAMOND_DB_DIR}/prot.accession2taxid.gz \
-           ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
-       wget -O ${DIAMOND_DB_DIR}/taxdmp.zip \
-           ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip
+        wget -O ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
+        wget -O ${TEMP_DIR}/diamond_db/taxdmp.zip \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip
+
+        # Make DIAMOND db and point the directory variables to the new files
+        diamond makedb \
+        --in ${TEMP_DIR}/diamond_db/nr.gz \
+        -d ${TEMP_DIR}/diamond_db/nr \
+        --taxonmap ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+        --taxonnodes ${TEMP_DIR}/diamond_db/taxdmp.zip
+
+        DIAMOND_DB_DIR="${TEMP_DIR}/diamond_db"
+        DIAMOND_DB="${DIAMOND_DB_DIR}/nr"
+        NEW_DIAMOND_DB="TRUE"
     fi
 
     #==============================================================================================#
