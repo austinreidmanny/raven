@@ -49,6 +49,7 @@ function usage() {
     "Optional parameters: \n" \
         "-l (library type of the reads; 'paired' or 'single'; [default=auto determine]) \n" \
         "-m (maximum amount of memory to use [in GB]; [default=16] ) \n" \
+        "-n (maximum number of CPUs to use; [default=attempt to auto-determine; not perfect]) \n" \
         "-w (set the working directory, where all analysis will take place; [default=current directory, \n" \
             "but a scratch directory with a lot of storage is recommended]) \n" \
         "-f (set the final directory, where all the files will be copied to the end [default=current directory]) \n" \
@@ -66,7 +67,7 @@ function usage() {
 #==================================================================================================#
 # Make sure the pipeline is invoked correctly, with project and sample names
 #==================================================================================================#
-    while getopts "p:s:l:m:w:f:t:h:d:" arg;
+    while getopts "p:s:l:m:n:w:f:t:h:d:" arg;
         do
             case ${arg} in
                 p ) # Take in the project name
@@ -94,6 +95,10 @@ function usage() {
                 m ) # set max memory to use (in GB; if any letters are entered, discard those)
                     MEMORY_ENTERED=${OPTARG}
                     MEMORY_TO_USE=$(echo $MEMORY_ENTERED | sed 's/[^0-9]*//g')
+                    ;;
+               
+                n ) # set max number of CPUs/processors/cores to use
+                    NUM_THREADS=${OPTARG}
                     ;;
 
                 w ) # set working directory
@@ -164,15 +169,17 @@ function usage() {
     #==============================================================================================#
     # CPUs (aka threads aka processors aka cores):
     ## Use `nproc` if installed (Linux or MacOS with gnu-core-utils); otherwise use `sysctl`
-    {   command -v nproc > /dev/null && \
+    if [[ -z "${NUM_THREADS}" ]] ; then
+      { command -v nproc > /dev/null && \
         NUM_THREADS=$(nproc) && \
         echo "Number of processors available (according to nproc): ${NUM_THREADS}"; \
         } \
     || \
-    {   command -v sysctl > /dev/null && \
+      { command -v sysctl > /dev/null && \
         NUM_THREADS=$(sysctl -n hw.ncpu) && \
         echo "Number of processors available (according to sysctl): ${NUM_THREADS}";
         }
+    fi
     #==============================================================================================#
     # Set memory usage to 16GB if none given by user
     if [[ -z "${MEMORY_TO_USE}" ]]; then
@@ -183,6 +190,8 @@ function usage() {
     # As a check to the user, print the project name and sample numbers to the screen
     echo "PROJECT name: ${PROJECT}"
     echo "SRA sample accessions: ${SAMPLES}"
+    echo "Memory limit: ${MEMORY_TO_USE}"
+    echo "Number of CPUs: ${NUM_THREADS}"
 #==================================================================================================#
 
 #==================================================================================================#
