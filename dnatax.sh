@@ -233,13 +233,13 @@ function usage() {
     if [[ -f ${HOME_DIR}/diamondToTaxonomy.py ]]
       then echo "All neccessary scripts are available to copy. COPYING...";
       cp ${HOME_DIR}/diamondToTaxonomy.py scripts/
-      cp $0 scripts/
+      cp ${HOME_DIR}/$(basename $0) scripts/
 
     # If the scripts are not available to copy, then tell user where to download
     # them, then exit
     else
       echo -e "One or more of the following scripts are missing: \n" \
-              "diamondToTaxonomy.py" >&2
+              "diamondToTaxonomy.py, $0" >&2
       echo "Please download this from github.com/austinreidmanny/dnatax" >&2
       echo "ERROR: Cannot find mandatory helper scripts. Exiting" >&2
       exit 1
