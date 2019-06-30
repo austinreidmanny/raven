@@ -138,11 +138,8 @@ function usage() {
      usage
     fi
 
-    # Retrieve name of the last sample (uses  older but cross-platform compatible BASH notation)
-    LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
-
-    # Create a variable that other parts of this pipeline can use mostly for naming
-    SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
+    # Create a variable that other parts of this pipeline can use (mostly for naming) [each SRA separated by underscore]
+    SAMPLES=$(echo ${ALL_SAMPLES} | sed 's/,/_/g')
 
     # Reset global expansion [had to change to read multiple sample names]
     set +f
