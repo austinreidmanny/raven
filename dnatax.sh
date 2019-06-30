@@ -184,11 +184,12 @@ function usage() {
         MEMORY_TO_USE="16"
     fi
 
-    # As a check to the user, print the project name and sample numbers to the screen
+    # As a check to the user, print the pipeline parameters (project name, sample accesions, etc)
     echo "PROJECT name: ${PROJECT}"
     echo "SRA sample accessions: ${SAMPLES}"
     echo "Memory limit: ${MEMORY_TO_USE}"
     echo "Number of CPUs: ${NUM_THREADS}"
+    echo "Pipeline start time: $(date)"
 #==================================================================================================#
 
 #==================================================================================================#
@@ -196,9 +197,10 @@ function usage() {
 #==================================================================================================#
 
     #   project-name/
-    #     |_ data/
-    #     |_ analysis/
-    #     |_ scripts/
+    #    |_ dnatax/
+    #        |_ data/
+    #        |_ analysis/
+    #        |_ scripts/
 
     # Will run all the analysis in scratch space (maximum read/write speed)
     # Will allocate specific temp space that is deleted at end of job
@@ -227,10 +229,11 @@ function usage() {
     # Setup scripts subdirecotry
     mkdir -p scripts
 
-    # Copy key taxonomy script from HOME to WORKING dir
+    # Copy dnatax pipeline & the key taxonomy script from HOME to WORKING dir
     if [[ -f ${HOME_DIR}/diamondToTaxonomy.py ]]
       then echo "All neccessary scripts are available to copy. COPYING...";
       cp ${HOME_DIR}/diamondToTaxonomy.py scripts/
+      cp $0 scripts/
 
     # If the scripts are not available to copy, then tell user where to download
     # them, then exit
