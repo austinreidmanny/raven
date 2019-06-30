@@ -52,7 +52,14 @@ function setup_dnatax() {
 
     # Setup a new environment where all the software needed for dnatax will be installed
     conda create --name env_dnatax \
-    seqtk=1.3 sra-tools=2.9.1_1 spades=3.13.1 diamond=0.9.21 trim-galore=0.6.2 wget python=3.6.7
+    seqtk=1.3 \
+    sra-tools=2.9.1_1 \
+    spades=3.13.1 \
+    diamond=0.9.21 \
+    trim-galore=0.6.2 \
+    wget \
+    python=3.7.3 \
+    requests
 
     # Tell the user that the setup has completed!
     echo -e "All necessary software as been successfully installed! \n" \
