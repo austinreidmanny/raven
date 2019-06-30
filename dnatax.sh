@@ -438,8 +438,8 @@ function de_novo_assembly() {
     #==============================================================================================#
     # Copy the results files from the temp directory to the working directory
     #==============================================================================================#
-    cp ${TEMP_DIR}/transcripts.fasta data/contigs/${SAMPLES}.contigs.fasta
-    cp ${TEMP_DIR}/transcripts.paths data/contigs/${SAMPLES}.contigs.paths
+    cp ${TEMP_DIR}/transcripts.fasta analysis/contigs/${SAMPLES}.contigs.fasta
+    cp ${TEMP_DIR}/transcripts.paths analysis/contigs/${SAMPLES}.contigs.paths
     cp ${TEMP_DIR}/spades.log analysis/contigs/${SAMPLES}.contigs.log
     #==============================================================================================#
 
@@ -684,7 +684,7 @@ function classification() {
     --more-sensitive \
     --threads ${NUM_THREADS} \
     --db ${DIAMOND_DB} \
-    --query data/contigs/${SAMPLES}.contigs.fasta \
+    --query analysis/contigs/${SAMPLES}.contigs.fasta \
     --out analysis/diamond/${SAMPLES}.nr.diamond.txt \
     --outfmt 102 \
     --max-hsps 1 \
@@ -776,7 +776,7 @@ function extract_viral() {
     # Retrieve the viral sequences and save them in a FASTA file
     grep Viruses analysis/taxonomy/${SAMPLES}.nr.diamond.taxonomy.txt | \
     cut -f 1 | \
-    seqtk subseq data/contigs/${SAMPLES}.contigs.fasta - > \
+    seqtk subseq analysis/contigs/${SAMPLES}.contigs.fasta - > \
           analysis/viruses/${SAMPLES}.viruses.fasta
     #==============================================================================================#
 
@@ -809,11 +809,14 @@ function cleanup() {
     #==============================================================================================#
     mkdir -p ${FINAL_DIR}/analysis
     mkdir -p ${FINAL_DIR}/scripts
-    mkdir -p ${FINAL_DIR}/data/contigs/
 
-    rsync -azv ${WORKING_DIR}/analysis/ ${FINAL_DIR}/analysis
+    rsync -azv ${WORKING_DIR}/analysis/contigs/${SAMPLES}* ${FINAL_DIR}/analysis/
+    rsync -azv ${WORKING_DIR}/analysis/diamond/${SAMPLES}* ${FINAL_DIR}/analysis/
+    rsync -azv ${WORKING_DIR}/analysis/taxonomy/${SAMPLES}* ${FINAL_DIR}/analysis/
+    rsync -azv ${WORKING_DIR}/analysis/timelogs/${SAMPLES}* ${FINAL_DIR}/analysis/
+    rsync -azv ${WORKING_DIR}/analysis/viruses/${SAMPLES}* ${FINAL_DIR}/analysis/
+
     rsync -azv ${WORKING_DIR}/scripts/ ${FINAL_DIR}/scripts
-    rsync -azv ${WORKING_DIR}/data/contigs/ ${FINAL_DIR}/data/contigs
 
     # If DIAMOND database files had to be downloaded, copy those to a permanent directory too
     if [[ ! -z "${NEW_DIAMOND_DB}" ]]; then
