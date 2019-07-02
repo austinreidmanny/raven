@@ -810,11 +810,11 @@ function cleanup() {
     mkdir -p ${FINAL_DIR}/analysis
     mkdir -p ${FINAL_DIR}/scripts
 
-    rsync -azv ${WORKING_DIR}/analysis/contigs/${SAMPLES}* ${FINAL_DIR}/analysis/
-    rsync -azv ${WORKING_DIR}/analysis/diamond/${SAMPLES}* ${FINAL_DIR}/analysis/
-    rsync -azv ${WORKING_DIR}/analysis/taxonomy/${SAMPLES}* ${FINAL_DIR}/analysis/
-    rsync -azv ${WORKING_DIR}/analysis/timelogs/${SAMPLES}* ${FINAL_DIR}/analysis/
-    rsync -azv ${WORKING_DIR}/analysis/viruses/${SAMPLES}* ${FINAL_DIR}/analysis/
+    rsync -azv ${WORKING_DIR}/analysis/contigs/${SAMPLES}* ${FINAL_DIR}/analysis/contigs/
+    rsync -azv ${WORKING_DIR}/analysis/diamond/${SAMPLES}* ${FINAL_DIR}/analysis/diamond/
+    rsync -azv ${WORKING_DIR}/analysis/taxonomy/${SAMPLES}* ${FINAL_DIR}/analysis/taxonomy/
+    rsync -azv ${WORKING_DIR}/analysis/timelogs/${SAMPLES}* ${FINAL_DIR}/analysis/timelogs/
+    rsync -azv ${WORKING_DIR}/analysis/viruses/${SAMPLES}* ${FINAL_DIR}/analysis/viruses/
 
     rsync -azv ${WORKING_DIR}/scripts/ ${FINAL_DIR}/scripts
 
