@@ -265,9 +265,8 @@ function download_sra() {
 
     #==============================================================================================#
     # Add the download from SRA step to the timelog file
-    echo "Downloading input FASTQs from the SRA at:" > \
-    analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Downloading input FASTQs from the SRA at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
 
     # Disable error checking because fasterq-dump treats 'existing files' as a failure
     set +eo pipefail
@@ -331,8 +330,8 @@ function adapter_trimming() {
 
     #==============================================================================================#
     # Adapter trimming log info
-    echo "Began adapter trimming at" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Began adapter trimming at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -372,8 +371,8 @@ function adapter_trimming() {
 
     #==============================================================================================#
     # Adapter trimming log info
-    echo "Finished adapter trimming at" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished adapter trimming at:    $(date)" | \
+       tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
@@ -404,8 +403,8 @@ function de_novo_assembly() {
 
     #==============================================================================================#
     # rnaSPAdes log info
-    echo "Began contig assembly at" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Began contig assembly at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -446,8 +445,8 @@ function de_novo_assembly() {
     #==============================================================================================#
     # rnaSPAdes log info
     #==============================================================================================#
-    echo "Finished contig assembly at:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished contig assembly at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
@@ -653,8 +652,8 @@ function classification() {
     #==============================================================================================#
     # DIAMOND log start
     #==============================================================================================#
-    echo "Began taxonomic classification at:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Began taxonomic classification at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -696,8 +695,8 @@ function classification() {
 
     #==============================================================================================#
     # DIAMOND log end
-    echo "Finished taxonomic classification:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished taxonomic classification:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
@@ -714,8 +713,8 @@ function taxonomy() {
     #==============================================================================================#
     # Taxonomy log info
     #==============================================================================================#
-    echo "Beginning taxonomy conversion:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Beginning taxonomy conversion:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -730,8 +729,8 @@ function taxonomy() {
     #==============================================================================================#
     # Taxonomy sequences log info
     #==============================================================================================#
-    echo "Finished taxonomy conversion:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished taxonomy conversion:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
@@ -761,9 +760,8 @@ function extract_viral() {
     #==============================================================================================#
     # Viral sequences log info
     #==============================================================================================#
-    echo "Beginning extraction of viral sequences at:" >> \
-         analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Beginning extraction of viral sequences at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -791,11 +789,9 @@ function extract_viral() {
     #==============================================================================================#
     # Viral sequences log info
     #==============================================================================================#
-    echo "Finished extraction of viral sequences at:" >> \
-         analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished extraction of viral sequences at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
-
 }
 
 function cleanup() {
@@ -844,6 +840,14 @@ function cleanup() {
     #==============================================================================================#
     # Remove temporary files
     rm -R ${TEMP_DIR}
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Tell user that the pipeline has finished successfully and where to find the final files
+    echo -e "dnatax pipeline finished successfully at $(date) \n" \
+            "Final files are located at ${FINAL_DIR} \n\n" \
+            "Have a fantastic day!" | \
+    tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
