@@ -139,7 +139,7 @@ function usage() {
     fi
 
     # Create a variable that other parts of this pipeline can use (mostly for naming) [each SRA separated by underscore]
-    SAMPLES=$(echo ${ALL_SAMPLES} | sed 's/,/_/g')
+    SAMPLES=$(echo ${ALL_SAMPLES[@]} | sed 's/ /_/g')
 
     # Reset global expansion [had to change to read multiple sample names]
     set +f
