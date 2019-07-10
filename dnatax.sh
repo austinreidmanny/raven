@@ -13,8 +13,27 @@
 # and saves the results to a final permanent directory and cleans up.
 #==================================================================================================#
 
+#==================================================================================================#
+# Initialize
+#==================================================================================================#
 # Stop program if it any component fails
 set -eo pipefail
+
+# Welcome user to DNAtax
+echo -e "\n ================================================================================\n" \
+           "Welcome to DNAtax! \n" \
+           "================================================================================\n" \
+           "Full source code & contact info available at github.com/austinreidmanny/dnatax  \n" \
+           "================================================================================\n"
+
+# Load environment containing all necessary software (prepared by the setup.sh script); if error, exit
+eval "$(conda shell.bash hook)"
+conda activate env_dnatax > /dev/null || {
+   echo -e "Could not activate the conda environment for dnatax." \
+           "Please fully run the setup.sh script, restart terminal, and try again."
+   exit 10
+   }
+#==================================================================================================#
 
 function usage() {
     #==== FUNCTION ================================================================================#
@@ -23,54 +42,89 @@ function usage() {
     #              program
     #==============================================================================================#
 
-    echo -e "\nERROR: Missing project and/or sample names. \n" \
-            "Make sure to provide a project name, \n" \
-            "one (or more) SRA run numbers separated by commas \n\n" \
-            "Usage: $0 -p PROJECT -s SRR10001,SRR10002,SRR..." \
-            "Optional parameters: \n" \
-                  "-l (library type of the reads; 'paired' or 'single'; [default=auto determine]) \n" \
-                  "-m (maximum amount of memory to use [in GB]; [default=16] ) \n" \
-            "Example of a complex run: \n" \
-            "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30\n\n" \
-            "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
-}
+    echo -e "\n" \
+    "ERROR: Missing project and/or sample names. \n" \
+    "Make sure to provide a project name and one (or more) SRA run numbers separated by commas \n\n" \
+    "Usage: $0 -p PROJECT -s SRR10001,SRR10002,SRR..." \
+    "Optional parameters: \n" \
+        "-l (library type of the reads; 'paired' or 'single'; [default=auto determine]) \n" \
+        "-m (maximum amount of memory to use [in GB]; [default=16] ) \n" \
+        "-n (maximum number of CPUs to use; [default=attempt to auto-determine; not perfect]) \n" \
+        "-w (set the working directory, where all analysis will take place; [default=current directory, \n" \
+            "but a scratch directory with a lot of storage is recommended]) \n" \
+        "-f (set the final directory, where all the files will be copied to the end [default=current directory]) \n" \
+        "-t (set the temporary directory, where the pipeline will dump all temp files [default='/tmp/dnatax/'] \n" \
+        "-h (set the home directory where DNAtax is located; [default=current directory, is recommended not to change]) \n" \
+        "-d (specify the full path to the DIAMOND database, including the db name - e.g., '/path/to/nr-database/nr' \n" \
+            "[default=none, will download all files to temp space and copy them to final directory at the end; NOTE: \n" \
+            "DNAtax requires a DIAMOND database, NCBI taxonmaps file, and NCBI protein2accessions file; \n" \
+            "These all must be located in the same directory as the DIAMOND database \n\n" \
+    "Example of a complex run: \n" \
+    "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30 -w external_drive/storage/ -f projects/dnatax/final/ -t /tmp/ -d tools/diamond/nr \n\n" \
+    "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
+    }
 
 #==================================================================================================#
 # Make sure the pipeline is invoked correctly, with project and sample names
 #==================================================================================================#
-    while getopts "p:s:l:m:" arg;
+    while getopts "p:s:l:m:n:w:f:t:h:d:" arg;
         do
             case ${arg} in
-        	p ) # Take in the project name
-        	    PROJECT=${OPTARG}
-        			    ;;
+                p ) # Take in the project name
+                    PROJECT=${OPTARG}
+                    ;;
 
-        	s ) # Take in the sample name(s)
+                s ) # Take in the sample name(s)
                     set -f
                     IFS=","
                     ALL_SAMPLES=(${OPTARG}) # call this when you want every individual sample
-                        ;;
+                    ;;
 
                 l ) # Take in the library type ('paired' or 'single')
-                  LIB_TYPE=${OPTARG}
-                  if [[ ${LIB_TYPE} == "paired" ]]; then
-                    PAIRED=1; SINGLE=0;
-                  elif [[ ${LIB_TYPE} == "single" ]]; then
-                    PAIRED=0; SINGLE=1
-                  else
-                    echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
-                    exit 3;
-                  fi;
-                        ;;
+                    LIB_TYPE=${OPTARG}
+                    if [[ ${LIB_TYPE} == "paired" ]]; then
+                        PAIRED=1; SINGLE=0;
+                    elif [[ ${LIB_TYPE} == "single" ]]; then
+                        PAIRED=0; SINGLE=1
+                    else
+                        echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
+                        exit 3;
+                    fi;
+                    ;;
 
                 m ) # set max memory to use (in GB; if any letters are entered, discard those)
                     MEMORY_ENTERED=${OPTARG}
                     MEMORY_TO_USE=$(echo $MEMORY_ENTERED | sed 's/[^0-9]*//g')
-                        ;;
+                    ;;
+               
+                n ) # set max number of CPUs/processors/cores to use
+                    NUM_THREADS=${OPTARG}
+                    ;;
+
+                w ) # set working directory
+                    WORKING_DIR=${OPTARG}
+                    ;;
+
+                f ) # set final directory
+                    FINAL_DIR=${OPTARG}
+                    ;;
+
+                t ) # set temp directory
+                    TEMP_DIR=${OPTARG}
+                    ;;
+
+                h ) # set home directory, where dnatax code is located; recommandation: don't change
+                    HOME_DIR=${OPTARG}
+                    ;;
+
+                d ) # set path to Diamond database
+                    DIAMOND_DB=${OPTARG}
+                    DIAMOND_DB_DIR=$(dirname "${DIAMOND_DB}")
+                    ;;
 
                 * ) # Display help
         		    usage
-        		     	;;
+        		    ;;
         	esac
         done; shift $(( OPTIND-1 ))
 
@@ -84,39 +138,66 @@ function usage() {
      usage
     fi
 
-    # Retrieve name of the last sample (uses  older but cross-platform compatible BASH notation)
-    LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
+    # Create a variable for naming [each SRA separated by underscore, unless there are too many samples]
+    if [[ ${#ALL_SAMPLES[@]} -le 5 ]]; then
+        SAMPLES=$(echo ${ALL_SAMPLES[@]} | sed 's/ /_/g')
+    else
+        # Retrieve name of the last sample (uses older but cross-platform compatible BASH notation)
+        LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
 
-    # Create a variable that other parts of this pipeline can use mostly for naming
-    SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
+        # Create an abbreviated naming scheme of "SRR{first}-SRR{last}"
+        SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
+    fi
 
     # Reset global expansion [had to change to read multiple sample names]
     set +f
+
+    # Check to see if all of the various directories were provided; if not, set the defaults
+    if [[ -z "${HOME_DIR}" ]] ; then
+        HOME_DIR=$(pwd)
+    fi
+
+    if [[ -z "${WORKING_DIR}" ]] ; then
+        WORKING_DIR="./dnatax/"
+    fi
+
+    if [[ -z "${FINAL_DIR}" ]] ; then
+        FINAL_DIR="./dnatax/"
+    fi
+
+    if [[ -z "${TEMP_DIR}" ]] ; then
+        TEMP_DIR="/tmp/dnatax/${SAMPLES}"
+    fi
 
     #==============================================================================================#
     # Set up number of CPUs to use and RAM
     #==============================================================================================#
     # CPUs (aka threads aka processors aka cores):
     ## Use `nproc` if installed (Linux or MacOS with gnu-core-utils); otherwise use `sysctl`
-    {   command -v nproc > /dev/null && \
-        NUM_THREADS=`nproc` && \
+    if [[ -z "${NUM_THREADS}" ]] ; then
+      { command -v nproc > /dev/null && \
+        NUM_THREADS=$(nproc) && \
         echo "Number of processors available (according to nproc): ${NUM_THREADS}"; \
         } \
     || \
-    {   command -v sysctl > /dev/null && \
-        NUM_THREADS=`sysctl -n hw.ncpu` && \
+      { command -v sysctl > /dev/null && \
+        NUM_THREADS=$(sysctl -n hw.ncpu) && \
         echo "Number of processors available (according to sysctl): ${NUM_THREADS}";
         }
+    fi
     #==============================================================================================#
     # Set memory usage to 16GB if none given by user
-    if [[ -z ${MEMORY_TO_USE} ]]; then
+    if [[ -z "${MEMORY_TO_USE}" ]]; then
         echo "No memory limit set by user. Defaulting to 16GB"
         MEMORY_TO_USE="16"
     fi
 
-    # As a check to the user, print the project name and sample numbers to the screen
+    # As a check to the user, print the pipeline parameters (project name, sample accesions, etc)
     echo "PROJECT name: ${PROJECT}"
-    echo "SRA sample accessions: ${SAMPLES}"
+    echo "SRA sample accessions: ${ALL_SAMPLES[@]}"
+    echo "Memory limit: ${MEMORY_TO_USE}"
+    echo "Number of CPUs: ${NUM_THREADS}"
+    echo "Pipeline start time: $(date)"
 #==================================================================================================#
 
 #==================================================================================================#
@@ -124,22 +205,14 @@ function usage() {
 #==================================================================================================#
 
     #   project-name/
-    #     |_ data/
-    #     |_ analysis/
-    #     |_ scripts/
+    #    |_ dnatax/
+    #        |_ data/
+    #        |_ analysis/
+    #        |_ scripts/
 
     # Will run all the analysis in scratch space (maximum read/write speed)
     # Will allocate specific temp space that is deleted at end of job
     # Will save final results in a permanent space
-
-    # Customize the paths for Home, Working, Temp, and Final directories #
-    #==============================================================================================#
-    export HOME_DIR=`pwd`
-    export WORKING_DIR="/n/scratch2/am704/nibert/${PROJECT}/"
-    export TEMP_DIR="/n/scratch2/am704/tmp/${PROJECT}/${SAMPLES}/"
-    export FINAL_DIR="/n/data1/hms/mbib/nibert/austin/${PROJECT}/"
-    export DIAMOND_DB_DIR="/n/data1/hms/mbib/nibert/austin/diamond/nr"
-    #==============================================================================================#
 
     # Create these directories
     mkdir -p ${WORKING_DIR}
@@ -164,16 +237,17 @@ function usage() {
     # Setup scripts subdirecotry
     mkdir -p scripts
 
-    # Copy key taxonomy script from HOME to WORKING dir
+    # Copy dnatax pipeline & the key taxonomy script from HOME to WORKING dir
     if [[ -f ${HOME_DIR}/diamondToTaxonomy.py ]]
       then echo "All neccessary scripts are available to copy. COPYING...";
       cp ${HOME_DIR}/diamondToTaxonomy.py scripts/
+      cp ${HOME_DIR}/$(basename $0) scripts/
 
     # If the scripts are not available to copy, then tell user where to download
     # them, then exit
     else
       echo -e "One or more of the following scripts are missing: \n" \
-              "diamondToTaxonomy.py" >&2
+              "diamondToTaxonomy.py, $0" >&2
       echo "Please download this from github.com/austinreidmanny/dnatax" >&2
       echo "ERROR: Cannot find mandatory helper scripts. Exiting" >&2
       exit 1
@@ -199,9 +273,8 @@ function download_sra() {
 
     #==============================================================================================#
     # Add the download from SRA step to the timelog file
-    echo "Downloading input FASTQs from the SRA at:" > \
-    analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Downloading input FASTQs from the SRA at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
 
     # Disable error checking because fasterq-dump treats 'existing files' as a failure
     set +eo pipefail
@@ -209,7 +282,7 @@ function download_sra() {
 
     #==============================================================================================#
     # Download fastq files from the SRA
-    for SAMPLE in ${ALL_SAMPLES}
+    for SAMPLE in ${ALL_SAMPLES[@]}
        do \
           fasterq-dump \
           --split-3 \
@@ -233,7 +306,7 @@ function download_sra() {
         export PAIRED=0
         export SINGLE=0
 
-        for SAMPLE in ${ALL_SAMPLES}
+        for SAMPLE in ${ALL_SAMPLES[@]}
            do if [[ -f data/raw-sra/${SAMPLE}.fastq ]]
               then let "SINGLE += 1"
            elif [[ -f data/raw-sra/${SAMPLE}_1.fastq ]] && \
@@ -255,20 +328,7 @@ function adapter_trimming() {
     #==============================================================================================#
 
     #==============================================================================================#
-    # Load necessary software packages
-    module load gcc/6.2.0 >&2
-    module load python/2.7.12 >&2
-    module load trimgalore >&2
-    #==============================================================================================#
-
-    #==============================================================================================#
     # Ensure that the necessary software is installed
-    command -v python2 > /dev/null || \
-    {   echo -e "ERROR: This script requires 'python2' but it could not found. \n" \
-            "Please install this application. \n" \
-            "Exiting with error code 6..." >&2; exit 6
-        }
-
     command -v trim_galore > /dev/null || \
     {   echo -e "ERROR: This script requires 'trim_galore' but it could not found. \n" \
             "Please install this application. \n" \
@@ -278,8 +338,8 @@ function adapter_trimming() {
 
     #==============================================================================================#
     # Adapter trimming log info
-    echo "Began adapter trimming at" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Began adapter trimming at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -288,7 +348,7 @@ function adapter_trimming() {
     ## Paired-end mode
     if [[ ${PAIRED} > 0 ]] && \
        [[ ${SINGLE} = 0 ]]
-       then for SAMPLE in ${ALL_SAMPLES}
+       then for SAMPLE in ${ALL_SAMPLES[@]}
                 do trim_galore \
                    --paired \
                    --stringency 5 \
@@ -301,7 +361,7 @@ function adapter_trimming() {
     ## Single/unpaired-end mode
     elif [[ ${SINGLE} > 0 ]] && \
          [[ ${PAIRED} = 0 ]]
-         then for SAMPLE in ${ALL_SAMPLES}
+         then for SAMPLE in ${ALL_SAMPLES[@]}
                    do trim_galore \
                       --stringency 5 \
                       --quality 1 \
@@ -319,8 +379,8 @@ function adapter_trimming() {
 
     #==============================================================================================#
     # Adapter trimming log info
-    echo "Finished adapter trimming at" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished adapter trimming at:    $(date)" | \
+       tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
@@ -329,13 +389,6 @@ function de_novo_assembly() {
     # This function will assemble long contiguous sequences (contigs) from the raw
     # raw reads from the FASTQ. These contigs will be much longer than the raw reads
     # and will more accurately reflect the input nucleic acids
-    #==============================================================================================#
-
-    #==============================================================================================#
-    # Load necessary software from the cluster; if not on the cluster, ensure that
-    # python3 is available to call (i.e. in your PATH)
-    module load gcc/6.2.0 1>&2
-    module load python/3.6.0 1>&2
     #==============================================================================================#
 
     #==============================================================================================#
@@ -358,8 +411,8 @@ function de_novo_assembly() {
 
     #==============================================================================================#
     # rnaSPAdes log info
-    echo "Began contig assembly at" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Began contig assembly at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -367,10 +420,10 @@ function de_novo_assembly() {
     #==============================================================================================#
     if [[ ${PAIRED} > 0 ]] && \
        [[ ${SINGLE} = 0 ]]
-       then yaml_spades_pairedreads ${ALL_SAMPLES}
+       then yaml_spades_pairedreads ${ALL_SAMPLES[@]}
     elif [[ ${SINGLE} > 0 ]] && \
          [[ ${PAIRED} = 0 ]]
-       then yaml_spades_singlereads ${ALL_SAMPLES}
+       then yaml_spades_singlereads ${ALL_SAMPLES[@]}
     else
        echo -e "ERROR: could not build YAML configuration file for rnaSPAdes. \n" \
                "Possibly mixed input libraries: both single & paired end reads" >&2
@@ -392,16 +445,16 @@ function de_novo_assembly() {
     #==============================================================================================#
     # Copy the results files from the temp directory to the working directory
     #==============================================================================================#
-    cp ${TEMP_DIR}/transcripts.fasta data/contigs/${SAMPLES}.contigs.fasta
-    cp ${TEMP_DIR}/transcripts.paths data/contigs/${SAMPLES}.contigs.paths
+    cp ${TEMP_DIR}/transcripts.fasta analysis/contigs/${SAMPLES}.contigs.fasta
+    cp ${TEMP_DIR}/transcripts.paths analysis/contigs/${SAMPLES}.contigs.paths
     cp ${TEMP_DIR}/spades.log analysis/contigs/${SAMPLES}.contigs.log
     #==============================================================================================#
 
     #==============================================================================================#
     # rnaSPAdes log info
     #==============================================================================================#
-    echo "Finished contig assembly at:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished contig assembly at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
@@ -510,6 +563,10 @@ function classification() {
     # DIAMOND_DB_DIR in the setup code block at the top.
     #==============================================================================================#
 
+    #==============================================================================================#
+    # Check that DIAMOND is installed, that the DIAMOND db is available, and that all required NCBI
+    # taxonomy files are downloaded and present in the same directory as the DIAMOND db
+    #==============================================================================================#
     # Make sure that DIAMOND is installed
     command -v diamond > /dev/null || \
     {   echo -e "ERROR: This script requires 'diamond' but it could not found. \n" \
@@ -517,47 +574,124 @@ function classification() {
             "Exiting with error code 6..." >&2; exit 6
         }
 
-    # Check for a DIAMOND database to use
-    if [[ -z "${DIAMOND_DB_DIR}" ]] ; then
-        echo -e "ERROR: Missing directory for Diamond database. \n" \
-                "Please specify this DIAMOND_DB_DIR value in the setup function" >&2
-        exit 4
+    # Check that the DIAMOND database is functional
+    # if not present or if corrupt, download NCBI-NR fasta and make a DIAMOND db
+    diamond dbinfo -d ${DIAMOND_DB} || {
+
+       echo -e "\nERROR: Missing Diamond database. \n" \
+               "Downloading NCBI NR database and necessary NCBI taxonomy information, and using these \n" \
+               "to make new DIAMOND db now. May take a while... \n" \
+               "Otherwise, quit (CTRL+C) and specify the directory containing all 3 files (db, taxonnodes, taxonmaps)" \
+               "with the '-d' flag. \n\n" >&2
+
+        # Download DIAMOND NR db and taxonomy files
+        mkdir -p ${TEMP_DIR}/diamond_db/
+        wget -O ${TEMP_DIR}/diamond_db/nr.gz ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz
+
+       # Download NCBI taxonomy files
+        wget -O ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
+        wget -O ${TEMP_DIR}/diamond_db/taxdmp.zip \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip
+
+        # Make DIAMOND db and point the directory variables to the new files
+        diamond makedb \
+        --in ${TEMP_DIR}/diamond_db/nr.gz \
+        -d ${TEMP_DIR}/diamond_db/nr \
+        --taxonmap ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+        --taxonnodes ${TEMP_DIR}/diamond_db/taxdmp.zip
+
+        DIAMOND_DB_DIR="${TEMP_DIR}/diamond_db"
+        DIAMOND_DB="${DIAMOND_DB_DIR}/nr"
+        NEW_DIAMOND_DB="TRUE"
+        }
+
+    #==============================================================================================#
+    # A note about DIAMOND databases and taxonomy files
+    #==============================================================================================#
+    # If DIAMOND is run in taxonomy mode (102), working with a without the necessary NCBI taxonomy
+    # files without these files, DIAMOND will fail. However, DIAMOND does not provide a way to check
+    # whether or not a given database was built with this NCBI taxonomy info
+    #
+    # The only way I can think to deal with this is to check if the taxonomy files are available
+    # in the same directory as the DIAMOND db. If not, I will assume that the database was not built
+    # with those and thus will fail upon starting.
+
+    # With that assumption, if the taxonomy files are not avilable, I will just download the NCBI
+    # NR fasta, download the NCBI taxonomy info, and build a new database to use
+    #==============================================================================================#
+
+    # Check for both required NCBI taxonomy files; if at least one isn't there, just download both
+    if [[ ! -f "${DIAMOND_DB_DIR}/prot.accession2taxid.gz" ]] || \
+       [[ ! -f "${DIAMOND_DB_DIR}/taxdmp.zip" ]]; then
+       echo -e "\nERROR: Necesary NCBI taxonomy files were not found in the same directory as the \n" \
+               "DIAMOND database. This implies that the provided DIAMOND database was not built \n" \
+               "with the proper taxonomy information. Will default to the NCBI NR database. \n\n" \
+               "Downloading NCBI NR database and necessary NCBI taxonomy information, and using these \n" \
+               "to make new DIAMOND db now. May take a while... \n\n" \
+               "Otherwise, quit (CTRL+C) and specify the full path to the DIAMOND database with the '-d' flag \n" \
+               "and ensure that the taxonnodes and taxonmaps are present in the same directory." \
+               "\n\n" >&2
+
+        # Download DIAMOND NR db and taxonomy files
+        mkdir -p ${TEMP_DIR}/diamond_db/
+        wget -O ${TEMP_DIR}/diamond_db/nr.gz ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz
+
+       # Download NCBI taxonomy files
+        wget -O ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
+        wget -O ${TEMP_DIR}/diamond_db/taxdmp.zip \
+            ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip
+
+        # Make DIAMOND db and point the directory variables to the new files
+        diamond makedb \
+        --in ${TEMP_DIR}/diamond_db/nr.gz \
+        -d ${TEMP_DIR}/diamond_db/nr \
+        --taxonmap ${TEMP_DIR}/diamond_db/prot.accession2taxid.gz \
+        --taxonnodes ${TEMP_DIR}/diamond_db/taxdmp.zip
+
+        DIAMOND_DB_DIR="${TEMP_DIR}/diamond_db"
+        DIAMOND_DB="${DIAMOND_DB_DIR}/nr"
+        NEW_DIAMOND_DB="TRUE"
     fi
+
     #==============================================================================================#
 
     #==============================================================================================#
     # DIAMOND log start
     #==============================================================================================#
-    echo "Began taxonomic classification at:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Began taxonomic classification at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
     # Classify the contigs with Diamond
     #==============================================================================================#
 
-    #==============================================================================================#
     # A note on DIAMOND parameters
     #==============================================================================================#
-    # Main determinants of memory usage are index-chunks and block-size
-    # Index-chunks should be set to 1, and then block-size should be scaled to memory usage
-    # A conservative (read: safe) conversion is each block uses 10 GB RAM. If it cannot automatically
-    # scale this, it will default to a very small memory footprint that will work on 16GB system
+    # Main determinants of memory usage are index-chunks and block-size.
+    # Index-chunks should be set to 2 (good trade-off between speed & memory usage),
+    # and block-size should be scaled to memory usage.
+    # A conservative (read: safe) conversion is that each block uses 10 GB RAM.
+    # If there is an issue with determining the optimal block-size, it will default to a
+    # very small memory footprint that will work on 16GB system.
     #==============================================================================================#
 
-    {      # try to scale it with memory available
-           BLOCK_SIZE_TO_USE=$( expr ${MEMORY_TO_USE} / 10 )
-    } || { # if that fails, set it to a very low, safe block-size
-           BLOCK_SIZE_TO_USE=2
-    }
+    # try to scale it with memory available;  if that fails, set it to a very low, safe block-size
+    { BLOCK_SIZE_TO_USE=$( expr ${MEMORY_TO_USE} / 10 )
+        } &> /dev/null || \
+    { BLOCK_SIZE_TO_USE=2
+        }
 
+    # Run diamond
     diamond \
     blastx \
     --verbose \
     --more-sensitive \
     --threads ${NUM_THREADS} \
-    --db ${DIAMOND_DB_DIR} \
-    --query data/contigs/${SAMPLES}.contigs.fasta \
+    --db ${DIAMOND_DB} \
+    --query analysis/contigs/${SAMPLES}.contigs.fasta \
     --out analysis/diamond/${SAMPLES}.nr.diamond.txt \
     --outfmt 102 \
     --max-hsps 1 \
@@ -569,8 +703,8 @@ function classification() {
 
     #==============================================================================================#
     # DIAMOND log end
-    echo "Finished taxonomic classification:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished taxonomic classification:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
@@ -587,8 +721,8 @@ function taxonomy() {
     #==============================================================================================#
     # Taxonomy log info
     #==============================================================================================#
-    echo "Beginning taxonomy conversion:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Beginning taxonomy conversion:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -603,8 +737,8 @@ function taxonomy() {
     #==============================================================================================#
     # Taxonomy sequences log info
     #==============================================================================================#
-    echo "Finished taxonomy conversion:" >> analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished taxonomy conversion:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
@@ -634,9 +768,8 @@ function extract_viral() {
     #==============================================================================================#
     # Viral sequences log info
     #==============================================================================================#
-    echo "Beginning extraction of viral sequences at:" >> \
-         analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Beginning extraction of viral sequences at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -649,7 +782,7 @@ function extract_viral() {
     # Retrieve the viral sequences and save them in a FASTA file
     grep Viruses analysis/taxonomy/${SAMPLES}.nr.diamond.taxonomy.txt | \
     cut -f 1 | \
-    seqtk subseq data/contigs/${SAMPLES}.contigs.fasta - > \
+    seqtk subseq analysis/contigs/${SAMPLES}.contigs.fasta - > \
           analysis/viruses/${SAMPLES}.viruses.fasta
     #==============================================================================================#
 
@@ -664,11 +797,9 @@ function extract_viral() {
     #==============================================================================================#
     # Viral sequences log info
     #==============================================================================================#
-    echo "Finished extraction of viral sequences at:" >> \
-         analysis/timelogs/${SAMPLES}.log
-    date >> analysis/timelogs/${SAMPLES}.log
+    echo "Finished extraction of viral sequences at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
-
 }
 
 function cleanup() {
@@ -678,22 +809,26 @@ function cleanup() {
     #==============================================================================================#
 
     #==============================================================================================#
-    # Error checking
-    #==============================================================================================#
-    # If any step fails, the function will stop to prevent propogating errors
-    set -euo pipefail
-    #==============================================================================================#
-
-    #==============================================================================================#
     # Copy results to final, permanent directory
     #==============================================================================================#
     mkdir -p ${FINAL_DIR}/analysis
     mkdir -p ${FINAL_DIR}/scripts
-    mkdir -p ${FINAL_DIR}/data/contigs/
 
-    rsync -azv ${WORKING_DIR}/analysis/ ${FINAL_DIR}/analysis
+    rsync -azv ${WORKING_DIR}/analysis/contigs/${SAMPLES}* ${FINAL_DIR}/analysis/contigs/
+    rsync -azv ${WORKING_DIR}/analysis/diamond/${SAMPLES}* ${FINAL_DIR}/analysis/diamond/
+    rsync -azv ${WORKING_DIR}/analysis/taxonomy/${SAMPLES}* ${FINAL_DIR}/analysis/taxonomy/
+    rsync -azv ${WORKING_DIR}/analysis/timelogs/${SAMPLES}* ${FINAL_DIR}/analysis/timelogs/
+    rsync -azv ${WORKING_DIR}/analysis/viruses/${SAMPLES}* ${FINAL_DIR}/analysis/viruses/
+
     rsync -azv ${WORKING_DIR}/scripts/ ${FINAL_DIR}/scripts
-    rsync -azv ${WORKING_DIR}/data/contigs/ ${FINAL_DIR}/data/contigs
+
+    # If DIAMOND database files had to be downloaded, copy those to a permanent directory too
+    if [[ ! -z "${NEW_DIAMOND_DB}" ]]; then
+        echo -e "Copying DIAMOND database & taxonomy files to permanent storage at ${FINAL_DIR}/scripts/diamond_db \n" \
+                "Next time you run dnatax, you may use these files with the flag '-d ${FINAL_DIR}/scripts/diamond_db/nr'"
+        mkdir -p ${FINAL_DIR}/scripts/diamond_db/
+        rsync -azv ${TEMP_DIR}/diamond_db/ ${FINAL_DIR}/scripts/diamond_db
+    fi
     #==============================================================================================#
 
     #==============================================================================================#
@@ -713,6 +848,14 @@ function cleanup() {
     #==============================================================================================#
     # Remove temporary files
     rm -R ${TEMP_DIR}
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Tell user that the pipeline has finished successfully and where to find the final files
+    echo -e "dnatax pipeline finished successfully at $(date) \n" \
+            "Final files are located at ${FINAL_DIR} \n\n" \
+            "Have a fantastic day!" | \
+    tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 }
 
