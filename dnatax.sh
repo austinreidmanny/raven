@@ -420,10 +420,10 @@ function de_novo_assembly() {
     #==============================================================================================#
     if [[ ${PAIRED} > 0 ]] && \
        [[ ${SINGLE} = 0 ]]
-       then yaml_spades_pairedreads ${ALL_SAMPLES[@]}
+       then yaml_spades_pairedreads
     elif [[ ${SINGLE} > 0 ]] && \
          [[ ${PAIRED} = 0 ]]
-       then yaml_spades_singlereads ${ALL_SAMPLES[@]}
+       then yaml_spades_singlereads
     else
        echo -e "ERROR: could not build YAML configuration file for rnaSPAdes. \n" \
                "Possibly mixed input libraries: both single & paired end reads" >&2
@@ -466,7 +466,6 @@ function yaml_spades_singlereads() {
     # just giving the program the name of the input files.
     #==============================================================================================#
     YAML_OUTPUT="scripts/${SAMPLES}.input.yaml"
-    FILES=${@}
 
     # Write beginning of the file
     echo '    [
@@ -475,7 +474,7 @@ function yaml_spades_singlereads() {
             single reads: [' > ${YAML_OUTPUT}
 
     # For each SRX, write the location of the forward reads
-    for SAMPLE in ${FILES}
+    for SAMPLE in ${ALL_SAMPLES[@]}
        do
           echo -n \
           '          "../data/fastq-adapter-trimmed/' >> ${YAML_OUTPUT}
@@ -505,7 +504,6 @@ function yaml_spades_pairedreads() {
     # just giving the program the name of the input files.
     #==============================================================================================#
     YAML_OUTPUT="scripts/${SAMPLES}.input.yaml"
-    FILES=${@}
 
     # Write beginning of the file
     echo '    [
@@ -515,7 +513,7 @@ function yaml_spades_pairedreads() {
             left reads: [' > ${YAML_OUTPUT}
 
     # For each SRX, write the location of the forward reads
-    for SAMPLE in ${FILES}
+    for SAMPLE in ${ALL_SAMPLES[@]}
        do
           echo -n \
           '          "../data/fastq-adapter-trimmed/' >> ${YAML_OUTPUT}
@@ -533,7 +531,7 @@ function yaml_spades_pairedreads() {
             right reads: [' >> ${YAML_OUTPUT}
 
     # For each SRX, write the location of the reverse reads
-    for SAMPLE in ${FILES}
+    for SAMPLE in ${ALL_SAMPLES[@]}
        do
           echo -n \
           '          "../data/fastq-adapter-trimmed/' >> ${YAML_OUTPUT}
