@@ -194,7 +194,7 @@ function usage() {
 
     # As a check to the user, print the pipeline parameters (project name, sample accesions, etc)
     echo "PROJECT name: ${PROJECT}"
-    echo "SRA sample accessions: ${SAMPLES}"
+    echo "SRA sample accessions: ${ALL_SAMPLES[@]}"
     echo "Memory limit: ${MEMORY_TO_USE}"
     echo "Number of CPUs: ${NUM_THREADS}"
     echo "Pipeline start time: $(date)"
