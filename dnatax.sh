@@ -138,8 +138,16 @@ function usage() {
      usage
     fi
 
-    # Create a variable that other parts of this pipeline can use (mostly for naming) [each SRA separated by underscore]
-    SAMPLES=$(echo ${ALL_SAMPLES[@]} | sed 's/ /_/g')
+    # Create a variable for naming [each SRA separated by underscore, unless there are too many samples]
+    if [[ ${#ALL_SAMPLES[@]} -le 5 ]]; then
+        SAMPLES=$(echo ${ALL_SAMPLES[@]} | sed 's/ /_/g')
+    else
+        # Retrieve name of the last sample (uses older but cross-platform compatible BASH notation)
+        LAST_SAMPLE=${ALL_SAMPLES[${#ALL_SAMPLES[@]}-1]}
+
+        # Create an abbreviated naming scheme of "SRR{first}-SRR{last}"
+        SAMPLES="${ALL_SAMPLES[0]}-${LAST_SAMPLE}"
+    fi
 
     # Reset global expansion [had to change to read multiple sample names]
     set +f
