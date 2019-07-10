@@ -282,7 +282,7 @@ function download_sra() {
 
     #==============================================================================================#
     # Download fastq files from the SRA
-    for SAMPLE in ${ALL_SAMPLES}
+    for SAMPLE in ${ALL_SAMPLES[@]}
        do \
           fasterq-dump \
           --split-3 \
@@ -306,7 +306,7 @@ function download_sra() {
         export PAIRED=0
         export SINGLE=0
 
-        for SAMPLE in ${ALL_SAMPLES}
+        for SAMPLE in ${ALL_SAMPLES[@]}
            do if [[ -f data/raw-sra/${SAMPLE}.fastq ]]
               then let "SINGLE += 1"
            elif [[ -f data/raw-sra/${SAMPLE}_1.fastq ]] && \
@@ -348,7 +348,7 @@ function adapter_trimming() {
     ## Paired-end mode
     if [[ ${PAIRED} > 0 ]] && \
        [[ ${SINGLE} = 0 ]]
-       then for SAMPLE in ${ALL_SAMPLES}
+       then for SAMPLE in ${ALL_SAMPLES[@]}
                 do trim_galore \
                    --paired \
                    --stringency 5 \
@@ -361,7 +361,7 @@ function adapter_trimming() {
     ## Single/unpaired-end mode
     elif [[ ${SINGLE} > 0 ]] && \
          [[ ${PAIRED} = 0 ]]
-         then for SAMPLE in ${ALL_SAMPLES}
+         then for SAMPLE in ${ALL_SAMPLES[@]}
                    do trim_galore \
                       --stringency 5 \
                       --quality 1 \
@@ -420,10 +420,10 @@ function de_novo_assembly() {
     #==============================================================================================#
     if [[ ${PAIRED} > 0 ]] && \
        [[ ${SINGLE} = 0 ]]
-       then yaml_spades_pairedreads ${ALL_SAMPLES}
+       then yaml_spades_pairedreads ${ALL_SAMPLES[@]}
     elif [[ ${SINGLE} > 0 ]] && \
          [[ ${PAIRED} = 0 ]]
-       then yaml_spades_singlereads ${ALL_SAMPLES}
+       then yaml_spades_singlereads ${ALL_SAMPLES[@]}
     else
        echo -e "ERROR: could not build YAML configuration file for rnaSPAdes. \n" \
                "Possibly mixed input libraries: both single & paired end reads" >&2
