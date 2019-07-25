@@ -666,6 +666,7 @@ function classification() {
     # Classify the contigs with Diamond
     #==============================================================================================#
 
+    #==============================================================================================#
     # A note on DIAMOND parameters
     #==============================================================================================#
     # Main determinants of memory usage are index-chunks and block-size.
@@ -682,6 +683,20 @@ function classification() {
     { BLOCK_SIZE_TO_USE=2
         }
 
+    #==============================================================================================#
+    # DIAMOND temporary directory
+    #==============================================================================================#
+    # Diamond will sporadically fail on Linux systems b/c it cannot access the temporary directory
+    # Accoding to the devs, the safest thing to do is use ramdisk. On Linux systems, this is /dev/shm/
+    # So if user is on a Linux system, use /dev/shm. If not, try our luck with the provided temp dir
+    #==============================================================================================#
+    if [[ -d /dev/shm/ ]]; then
+        DIAMOND_TEMP_DIR="/dev/shm/"
+    else
+        DIAMOND_TEMP_DIR=${TEMP_DIR}
+    fi
+    #==============================================================================================#
+
     # Run diamond
     diamond \
     blastx \
@@ -696,7 +711,7 @@ function classification() {
     --top 1 \
     --block-size ${BLOCK_SIZE_TO_USE} \
     --index-chunks 2 \
-    --tmpdir ${TEMP_DIR}
+    --tmpdir ${DIAMOND_TEMP_DIR}
     #==============================================================================================#
 
     #==============================================================================================#
