@@ -61,7 +61,8 @@ function setup_dnatax() {
     wget \
     python=3.7.3 \
     requests \
-    bwa=0.7.17
+    bwa=0.7.17 \
+    samtools
 
     # Tell the user that the setup has completed!
     echo -e "All necessary software as been successfully installed! \n" \
