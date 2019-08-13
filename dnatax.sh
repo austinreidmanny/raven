@@ -96,7 +96,7 @@ function usage() {
                     MEMORY_ENTERED=${OPTARG}
                     MEMORY_TO_USE=$(echo $MEMORY_ENTERED | sed 's/[^0-9]*//g')
                     ;;
-               
+
                 n ) # set max number of CPUs/processors/cores to use
                     NUM_THREADS=${OPTARG}
                     ;;
@@ -755,6 +755,132 @@ function taxonomy() {
     #==============================================================================================#
 }
 
+function mapping() {
+    #==== FUNCTION ================================================================================#
+    #        NAME: mapping
+    # DESCRIPTION: map initial reads to the de novo assembled contigs and merge that as a new column
+    #              onto the table containing all contigs and their taxonomic assignment
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Preparation
+    #==============================================================================================#
+    # Create mapping directory for saving the results
+    mkdir -p analysis/mapping
+
+    # Create input and output file names
+    taxonomy_table="analysis/taxonomy/${SAMPLES}.nr.diamond.taxonomy.txt"
+    mapped_table="analysis/mapping/${SAMPLES}.nr.diamond.taxonomy.mapped.txt"
+
+    # Make sure BWA was installed correctly
+    command -v bwa > /dev/null || \
+    {   echo -e "ERROR: This script requires the tool 'bwa' but could not found. \n" \
+            "Please rerun the setup scirpt or install this application manually. \n" \
+            "Exiting with error code 7..." >&2; exit 7
+        }
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Index the reference and map the reads
+    #==============================================================================================#
+    # Build BWA index out of the reference
+    bwa index \
+    -p analysis/mapping/bwa-index_${SAMPLES} \
+    analysis/mapping/${SAMPLES}.contigs.fasta
+
+    # Perform the mapping
+    ## paired-end input reads
+    if  [[ ${PAIRED} > 0 ]] && \
+        [[ ${SINGLE} = 0 ]]; then
+
+        bwa mem \
+        -t ${NUM_THREADS} \
+        analysis/mapping/bwa-index_${SAMPLES} \
+        <(cat data/fastq-adapter-trimmed/*_1_val_1.fq) \
+        <(cat data/fastq-adapter-trimmed/*_2_val_2.fq) > \
+        analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.sam
+
+    ## unpaired input reads
+    elif [[ ${SINGLE} > 0 ]] && \
+         [[ ${PAIRED} = 0 ]]; then
+
+         bwa mem \
+         -t ${NUM_THREADS} \
+         analysis/mapping/bwa-index_${SAMPLES} \
+         <(cat data/fastq-adapter-trimmed/*trimmed.fq) > \
+         analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.sam
+
+    else
+       echo -e "ERROR: Could not map reads to contigs. \n" \
+               "Possibly mixed input libraries: both single & paired end reads. \n" \
+               "Exiting with error 8..." >&2
+       exit 8
+    fi
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Get summary statistics of the mapping
+    #==============================================================================================#
+    samtools flagstat  \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.sam > \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.stats
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Remove unmapped reads
+    #==============================================================================================#
+    samtools view \
+    -F 4 -bh \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.sam > \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Sort the reads
+    #==============================================================================================#
+    samtools sort \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam > \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Get per-contig read counts
+    #==============================================================================================#
+        # output format (tab-delimited):
+        # contig_name    contig_length    number_mapped_reads    number_unmapped_reads
+
+    samtools idxstats \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam > \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp
+
+    # Drop the column with "number unmapped reads" because its always zero
+    cut -f1,2,4 \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp> \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
+
+    # Remove temporary file
+    rm analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp
+
+    # Get rid of last line because it's just unmapped reads, which we already have from samtools flagstat
+    head -n -1 \
+    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
+
+
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Save results as a tab-delimited table;
+    # similar to the taxonomy table, but with per-contig length & read counts as final 2 columns;
+    # make sure they are both input files are sorted on the contigs so it merges properly
+    #==============================================================================================#
+    join \
+    -t $'\t' \ # input files' fields are separated by tabs
+    <(sort -k1,1 ${taxonomy_table}) \
+    <(sort -k1,1 analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt) > \
+    ${mapped_table}
+
+}
+
 function extract_viral() {
     #==============================================================================================#
     # This function will extract the viral sequences, save their taxonomy info to
@@ -880,6 +1006,7 @@ adapter_trimming
 de_novo_assembly
 classification
 taxonomy
+mapping
 extract_viral
 cleanup
 #==================================================================================================#
