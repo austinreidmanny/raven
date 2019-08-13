@@ -874,7 +874,7 @@ function mapping() {
     # make sure they are both input files are sorted on the contigs so it merges properly
     #==============================================================================================#
     join \
-    -t $'\t' \ # input files' fields are separated by tabs
+    -t $'\t' \
     <(sort -k1,1 ${taxonomy_table}) \
     <(sort -k1,1 analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt) > \
     ${mapped_table}
