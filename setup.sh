@@ -31,7 +31,8 @@ function install_conda() {
     # Conda is now installed, but the shell needs to start in order to run it
     # Alert the user to rerun the script
     echo -e "\n\n ATTENTION: To complete installation, please rerun this script. \n" \
-            "This will allow the system to update and enable you to use the software. Please rerun. \n\n"
+            "This will allow the system to update and enable you to use the software. \n\n"\
+            "PLEASE RERUN THIS SCRIPT... \n\n"
 
     # Launch a new subshell (which will load conda); when user relaunches the script, it will
     # continue to the setup_dnatax function and finish setup
@@ -59,7 +60,8 @@ function setup_dnatax() {
     trim-galore=0.6.2 \
     wget \
     python=3.7.3 \
-    requests
+    requests \
+    bwa=0.7.17
 
     # Tell the user that the setup has completed!
     echo -e "All necessary software as been successfully installed! \n" \
