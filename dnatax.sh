@@ -322,6 +322,47 @@ function download_sra() {
    echo "finished downloading SRA files"
 }
 
+function determine_library_type() {
+    #==============================================================================================#
+    # If no library type is given by user, determine if single reads or paired-end reads by looking
+    # at file naming scheme; SRA & fasterq-dump give specific naming scheme for paired vs. unpaired
+    #==============================================================================================#
+
+    # Check to make sure library type not provided by user, then set both paired and single to 0;
+    # will read through each fastq file and count how many are paired vs single-end based on
+    # fasterq-dump's naming scheme
+
+    if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
+        export PAIRED=0
+        export SINGLE=0
+
+        for SAMPLE in ${ALL_SAMPLES[@]}
+            do
+                if [[ -f data/raw-sra/${SAMPLE}.fastq ]]
+                    then let "SINGLE += 1"
+                elif [[ -f data/raw-sra/${SAMPLE}_1.fastq ]] && \
+                     [[ -f data/raw-sra/${SAMPLE}_2.fastq ]]
+                     then let "PAIRED += 1"
+                else
+                    echo "ERROR: cannot determine if input libraries are paired-end or" \
+            			     "single-end. Exiting" >&2; exit 2
+                fi
+            done
+
+        ## Paired-end reads mode
+        if [[ ${PAIRED} > 0 ]] && [[ ${SINGLE} = 0 ]]; then
+           LIB_TYPE="paired"
+
+        ## Single-end reads mode
+        elif [[ ${SINGLE} > 0 ]] && [[ ${PAIRED} = 0 ]]; then
+             LIB_TYPE="single"
+
+        else
+             echo "ERROR: cannot determine if input libraries are paired-end or " \
+                  "single-end. Exiting" >&2; exit 2
+        fi
+}
+
 function adapter_trimming() {
     #==============================================================================================#
     # Trim adapters from raw SRA files
@@ -1002,6 +1043,7 @@ function cleanup() {
 # Run the pipeline
 #==================================================================================================#
 download_sra
+determine_library_type
 adapter_trimming
 de_novo_assembly
 classification
