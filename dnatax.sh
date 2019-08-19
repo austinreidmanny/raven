@@ -83,11 +83,11 @@ function usage() {
                 l ) # Take in the library type ('paired' or 'single')
                     LIB_TYPE=${OPTARG}
                     if [[ ${LIB_TYPE} == "paired" ]]; then
-                        PAIRED=1; SINGLE=0;
+                        LIB_TYPE="paired"
                     elif [[ ${LIB_TYPE} == "single" ]]; then
-                        PAIRED=0; SINGLE=1
+                        LIB_TYPE="single"
                     else
-                        echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
+                        echo "ERROR: Library type must be 'paired' or 'single'. Exiting with error 3..." >&2
                         exit 3;
                     fi;
                     ;;
@@ -257,71 +257,6 @@ function usage() {
     echo "Setup complete"
 #==================================================================================================#
 
-function download_sra() {
-    #==============================================================================================#
-    # Downloads the transcriptomes from the NCBI Sequence Read Archive (SRA)
-    #==============================================================================================#
-
-    #==============================================================================================#
-    # Ensure that the necessary software is installed
-    command -v fasterq-dump > /dev/null || \
-    {   echo -e "ERROR: This script requires 'fasterq-dump' but it could not found. \n" \
-            "Please install this application. \n" \
-            "Exiting with error code 6..." >&2 && exit 6
-        }
-    #==============================================================================================#
-
-    #==============================================================================================#
-    # Add the download from SRA step to the timelog file
-    echo "Downloading input FASTQs from the SRA at:    $(date)" | \
-        tee -a analysis/timelogs/${SAMPLES}.log
-
-    # Disable error checking because fasterq-dump treats 'existing files' as a failure
-    set +eo pipefail
-    #==============================================================================================#
-
-    #==============================================================================================#
-    # Download fastq files from the SRA
-    for SAMPLE in ${ALL_SAMPLES[@]}
-       do \
-          fasterq-dump \
-          --split-3 \
-          -t ${TEMP_DIR} \
-          -e ${NUM_THREADS} \
-          --mem=${MEMORY_TO_USE} \
-          -p \
-          --skip-technical \
-          --rowid-as-name \
-          --outdir data/raw-sra \
-          ${SAMPLE}
-       done
-    #==============================================================================================#
-
-    # Reset the error checking
-    set -eo pipefail
-
-    # If no library type is given by user, determine if single reads or paired-end reads by looking
-    # at file naming scheme; SRA & fasterq-dump give specific naming scheme for paired vs. unpaired
-    if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
-        export PAIRED=0
-        export SINGLE=0
-
-        for SAMPLE in ${ALL_SAMPLES[@]}
-           do if [[ -f data/raw-sra/${SAMPLE}.fastq ]]
-              then let "SINGLE += 1"
-           elif [[ -f data/raw-sra/${SAMPLE}_1.fastq ]] && \
-                [[ -f data/raw-sra/${SAMPLE}_2.fastq ]]
-              then let "PAIRED += 1"
-           else
-              echo "ERROR: cannot determine if input libraries are paired-end or" \
-        			     "single-end. Exiting" >&2
-              exit 2
-           fi; done
-   fi
-
-   echo "finished downloading SRA files"
-}
-
 function determine_library_type() {
     #==============================================================================================#
     # If no library type is given by user, determine if single reads or paired-end reads by looking
@@ -365,6 +300,57 @@ function determine_library_type() {
     fi
 }
 
+function download_sra() {
+    #==============================================================================================#
+    # Downloads the transcriptomes from the NCBI Sequence Read Archive (SRA)
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Ensure that the necessary software is installed
+    command -v fasterq-dump > /dev/null || \
+    {   echo -e "ERROR: This script requires 'fasterq-dump' but it could not found. \n" \
+            "Please install this application. \n" \
+            "Exiting with error code 6..." >&2 && exit 6
+        }
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Add the download from SRA step to the timelog file
+    echo "Downloading input FASTQs from the SRA at:    $(date)" | \
+        tee -a analysis/timelogs/${SAMPLES}.log
+
+    # Disable error checking because fasterq-dump treats 'existing files' as a failure
+    set +eo pipefail
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Download fastq files from the SRA
+    for SAMPLE in ${ALL_SAMPLES[@]}
+       do \
+          fasterq-dump \
+          --split-3 \
+          -t ${TEMP_DIR} \
+          -e ${NUM_THREADS} \
+          --mem=${MEMORY_TO_USE} \
+          -p \
+          --skip-technical \
+          --rowid-as-name \
+          --outdir data/raw-sra \
+          ${SAMPLE}
+       done
+    #==============================================================================================#
+
+    # Reset the error checking
+    set -eo pipefail
+
+    # Determine the library type of the downloaded reads (paired or unpaired reads)
+    determine_library_type
+
+    # Notify user that the reads have finished Downloading
+   echo "finished downloading SRA files at:    $(date)" | \
+       tee -a analysis/timelogs/${SAMPLES}.log
+}
+
 function adapter_trimming() {
     #==============================================================================================#
     # Trim adapters from raw SRA files
@@ -388,29 +374,32 @@ function adapter_trimming() {
     #==============================================================================================#
     # Run TrimGalore! in paired or single end mode, depending on input library type
     #==============================================================================================#
+    # Check to make sure library type has been set or determined
+    if [[ -z "${LIB_TYPE}" ]]; then
+        determine_library_type
+    fi
+
     ## Paired-end mode
-    if [[ ${PAIRED} > 0 ]] && \
-       [[ ${SINGLE} = 0 ]]
-       then for SAMPLE in ${ALL_SAMPLES[@]}
-                do trim_galore \
-                   --paired \
-                   --stringency 5 \
-                   --quality 1 \
-                   -o data/fastq-adapter-trimmed \
-                   data/raw-sra/${SAMPLE}_1.fastq \
-                   data/raw-sra/${SAMPLE}_2.fastq
-                done
+    if [[ ${LIB_TYPE} == "paired" ]]; then
+        for SAMPLE in ${ALL_SAMPLES[@]}
+            do trim_galore \
+               --paired \
+               --stringency 5 \
+               --quality 1 \
+               -o data/fastq-adapter-trimmed \
+               data/raw-sra/${SAMPLE}_1.fastq \
+               data/raw-sra/${SAMPLE}_2.fastq
+            done
 
     ## Single/unpaired-end mode
-    elif [[ ${SINGLE} > 0 ]] && \
-         [[ ${PAIRED} = 0 ]]
-         then for SAMPLE in ${ALL_SAMPLES[@]}
-                   do trim_galore \
-                      --stringency 5 \
-                      --quality 1 \
-                      -o data/fastq-adapter-trimmed \
-                      data/raw-sra/${SAMPLE}.fastq
-                   done
+    elif [[ ${LIB_TYPE} == "single" ]]; then
+        for SAMPLE in ${ALL_SAMPLES[@]}
+           do trim_galore \
+              --stringency 5 \
+              --quality 1 \
+              -o data/fastq-adapter-trimmed \
+              data/raw-sra/${SAMPLE}.fastq
+           done
 
     ## If cannot determine library type, exit
     else
@@ -461,12 +450,12 @@ function de_novo_assembly() {
     #==============================================================================================#
     # Construct configuration file (YAML format) for input for rnaSPAdes
     #==============================================================================================#
-    if [[ ${PAIRED} > 0 ]] && \
-       [[ ${SINGLE} = 0 ]]
-       then yaml_spades_pairedreads
-    elif [[ ${SINGLE} > 0 ]] && \
-         [[ ${PAIRED} = 0 ]]
-       then yaml_spades_singlereads
+    if [[ ${LIB_TYPE} == "paired" ]]; then
+        yaml_spades_pairedreads
+
+    elif [[ ${LIB_TYPE} == "unpaired" ]]; then
+        yaml_spades_singlereads
+
     else
        echo -e "ERROR: could not build YAML configuration file for rnaSPAdes. \n" \
                "Possibly mixed input libraries: both single & paired end reads" >&2
@@ -810,10 +799,16 @@ function mapping() {
     #==============================================================================================#
     # Create mapping directory for saving the results
     mkdir -p analysis/mapping
+    mkdir -p analysis/mapping/processing
 
     # Create input and output file names
     taxonomy_table="analysis/taxonomy/${SAMPLES}.nr.diamond.taxonomy.txt"
     mapped_table="analysis/mapping/${SAMPLES}.nr.diamond.taxonomy.mapped.txt"
+
+    # Check if paired-end or single-end reads
+    if [[ -z ${LIB_TYPE} ]]; then
+        determine_library_type
+    fi
 
     # Make sure BWA was installed correctly
     command -v bwa > /dev/null || \
@@ -828,30 +823,29 @@ function mapping() {
     #==============================================================================================#
     # Build BWA index out of the reference
     bwa index \
-    -p analysis/mapping/bwa-index_${SAMPLES} \
+    -p analysis/mapping/processing/bwa-index_${SAMPLES} \
     analysis/contigs/${SAMPLES}.contigs.fasta
 
     # Perform the mapping
+
     ## paired-end input reads
-    if  [[ ${PAIRED} > 0 ]] && \
-        [[ ${SINGLE} = 0 ]]; then
+    if  [[ ${LIB_TYPE} == "paired" ]]; then
 
         bwa mem \
         -t ${NUM_THREADS} \
-        analysis/mapping/bwa-index_${SAMPLES} \
+        analysis/mapping/processing/bwa-index_${SAMPLES} \
         <(cat data/fastq-adapter-trimmed/*_1_val_1.fq) \
         <(cat data/fastq-adapter-trimmed/*_2_val_2.fq) > \
-        analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.sam
+        analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam
 
     ## unpaired input reads
-    elif [[ ${SINGLE} > 0 ]] && \
-         [[ ${PAIRED} = 0 ]]; then
+    elif [[ ${LIB_TYPE} == "single" ]]; then
 
          bwa mem \
          -t ${NUM_THREADS} \
-         analysis/mapping/bwa-index_${SAMPLES} \
+         analysis/mapping/processing/bwa-index_${SAMPLES} \
          <(cat data/fastq-adapter-trimmed/*trimmed.fq) > \
-         analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.sam
+         analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam
 
     else
        echo -e "ERROR: Could not map reads to contigs. \n" \
@@ -865,8 +859,8 @@ function mapping() {
     # Get summary statistics of the mapping
     #==============================================================================================#
     samtools flagstat  \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.sam > \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.stats
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.stats
     #==============================================================================================#
 
     #==============================================================================================#
@@ -874,16 +868,16 @@ function mapping() {
     #==============================================================================================#
     samtools view \
     -F 4 -bh \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.sam > \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam
     #==============================================================================================#
 
     #==============================================================================================#
     # Sort the reads
     #==============================================================================================#
     samtools sort \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam > \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam
     #==============================================================================================#
 
     #==============================================================================================#
@@ -893,34 +887,45 @@ function mapping() {
         # contig_name    contig_length    number_mapped_reads    number_unmapped_reads
 
     samtools idxstats \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam > \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp
 
     # Drop the column with "number unmapped reads" because its always zero
-    cut -f1,2,4 \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp> \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
-
-    # Remove temporary file
-    rm analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp
+    cut -f1,2,3 \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
 
     # Get rid of last line because it's just unmapped reads, which we already have from samtools flagstat
     head -n -1 \
-    analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt.trimmed
 
+    # Remove temporary file
+    mv analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt.trimmed \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
 
     #==============================================================================================#
 
     #==============================================================================================#
-    # Save results as a tab-delimited table;
-    # similar to the taxonomy table, but with per-contig length & read counts as final 2 columns;
-    # make sure they are both input files are sorted on the contigs so it merges properly
+    # Save results as a tab-delimited table
     #==============================================================================================#
+
+      #============================================================================================#
+      # similar to the taxonomy table, but with per-contig length & read counts as final 2 columns;
+      # make sure they are both input files are sorted on the contigs so it merges properly
+      #
+      # However, the names of the contigs are NODE_####, which is difficult for 'sort' to parse;
+      # I cannot get it to sort NODE_1_ before NODE_101_, perhaps b/c of the mixed letters+numbers;
+      # So at the end, I will re-sort the table by contig length (longest first) -- the original order
+      #============================================================================================#
+
     join \
     -t $'\t' \
-    <(sort -k1,1 ${taxonomy_table}) \
-    <(sort -k1,1 analysis/mapping/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt) > \
+    <(sort -k1,1n ${taxonomy_table}) \
+    <(sort -k1,1n analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt) | \
+    sort -rnk12,12 - > \
     ${mapped_table}
+    #==============================================================================================#
 
 }
 
