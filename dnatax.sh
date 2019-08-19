@@ -329,12 +329,12 @@ function determine_library_type() {
     #==============================================================================================#
 
     # Check to make sure library type not provided by user, then set both paired and single to 0;
-    # will read through each fastq file and count how many are paired vs single-end based on
+    # will read through list of fastq files and count how many are paired vs single-end based on
     # fasterq-dump's naming scheme
 
-    if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
-        export PAIRED=0
-        export SINGLE=0
+    if [[ -z ${LIB_TYPE} ]]; then
+        PAIRED=0
+        SINGLE=0
 
         for SAMPLE in ${ALL_SAMPLES[@]}
             do
@@ -350,17 +350,19 @@ function determine_library_type() {
             done
 
         ## Paired-end reads mode
-        if [[ ${PAIRED} > 0 ]] && [[ ${SINGLE} = 0 ]]; then
-           LIB_TYPE="paired"
+        if [[ ${PAIRED} > 0 ]] && [[ ${SINGLE} = 0 ]];
+            then LIB_TYPE="paired"
 
         ## Single-end reads mode
-        elif [[ ${SINGLE} > 0 ]] && [[ ${PAIRED} = 0 ]]; then
-             LIB_TYPE="single"
+        elif [[ ${SINGLE} > 0 ]] && [[ ${PAIRED} = 0 ]];
+            then LIB_TYPE="single"
 
+        ## Otherwise, error
         else
              echo "ERROR: cannot determine if input libraries are paired-end or " \
                   "single-end. Exiting" >&2; exit 2
         fi
+    fi
 }
 
 function adapter_trimming() {
@@ -827,7 +829,7 @@ function mapping() {
     # Build BWA index out of the reference
     bwa index \
     -p analysis/mapping/bwa-index_${SAMPLES} \
-    analysis/mapping/${SAMPLES}.contigs.fasta
+    analysis/contigs/${SAMPLES}.contigs.fasta
 
     # Perform the mapping
     ## paired-end input reads
