@@ -475,9 +475,19 @@ function de_novo_assembly() {
     #==============================================================================================#
 
     #==============================================================================================#
+    # Filter out all contigs shorter than 300 nucleotides
+    #==============================================================================================#
+    seqtk seq \
+    -L 300 \
+    ${TEMP_DIR}/transcripts.fasta > \
+    ${TEMP_DIR}/transcripts.filtered.fasta
+    #==============================================================================================#
+
+    #==============================================================================================#
     # Copy the results files from the temp directory to the working directory
     #==============================================================================================#
-    cp ${TEMP_DIR}/transcripts.fasta analysis/contigs/${SAMPLES}.contigs.fasta
+    cp ${TEMP_DIR}/transcripts.filtered.fasta analysis/contigs/${SAMPLES}.contigs.fasta
+    cp ${TEMP_DIR}/transcripts.fasta analysis/contigs/${SAMPLES}.contigs.unfiltered.fasta
     cp ${TEMP_DIR}/transcripts.paths analysis/contigs/${SAMPLES}.contigs.paths
     cp ${TEMP_DIR}/spades.log analysis/contigs/${SAMPLES}.contigs.log
     #==============================================================================================#
