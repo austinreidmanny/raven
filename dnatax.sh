@@ -927,6 +927,9 @@ function mapping() {
       # However, the names of the contigs are NODE_####, which is difficult for 'sort' to parse;
       # I cannot get it to sort NODE_1_ before NODE_101_, perhaps b/c of the mixed letters+numbers;
       # So at the end, I will re-sort the table by contig length (longest first) -- the original order
+      #
+      # The final step is to calculate a normalized coverage value per contig. This will just be the 
+      # number of mapped reads to the contig divided by its length (column 13/column 12)
       #============================================================================================#
 
     join \
@@ -934,7 +937,13 @@ function mapping() {
     <(sort -k1,1n ${taxonomy_table}) \
     <(sort -k1,1n analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt) | \
     sort -rnk12,12 - > \
-    ${mapped_table}
+    ${mapped_table}.temp
+
+    # Determine coverage values by dividing the number of reads by the length of the contig
+    awk '{print $0"\t"($13/$12)}' ${mapped_table}.temp > ${mapped_table}
+
+    # Remove temporary file
+    rm ${mapped_table}.temp
     #==============================================================================================#
 
 }
