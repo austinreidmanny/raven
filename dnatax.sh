@@ -1008,16 +1008,29 @@ function cleanup() {
     #==============================================================================================#
     # Copy results to final, permanent directory
     #==============================================================================================#
+    # Make necessary subdirectories in final directory
     mkdir -p ${FINAL_DIR}/analysis
     mkdir -p ${FINAL_DIR}/scripts
 
+    # Copy most of the analysis files
     rsync -azv ${WORKING_DIR}/analysis/contigs/${SAMPLES}* ${FINAL_DIR}/analysis/contigs/
     rsync -azv ${WORKING_DIR}/analysis/diamond/${SAMPLES}* ${FINAL_DIR}/analysis/diamond/
     rsync -azv ${WORKING_DIR}/analysis/taxonomy/${SAMPLES}* ${FINAL_DIR}/analysis/taxonomy/
     rsync -azv ${WORKING_DIR}/analysis/timelogs/${SAMPLES}* ${FINAL_DIR}/analysis/timelogs/
     rsync -azv ${WORKING_DIR}/analysis/viruses/${SAMPLES}* ${FINAL_DIR}/analysis/viruses/
 
-    rsync -azv ${WORKING_DIR}/scripts/ ${FINAL_DIR}/scripts
+    # Copy the mapping files (a little more complicated so they get their own block)
+    rsync -azv --no-r ${WORKING_DIR}/analysis/mapping/${SAMPLES}* \
+                      ${FINAL_DIR}/analysis/mapping/
+    rsync -azv --no-r ${WORKING_DIR}/analysis/mapping/processing/${SAMPLES}*sorted.bam \
+                      ${FINAL_DIR}/analysis/mapping/processing/
+    rsync -azv --no-r ${WORKING_DIR}/analysis/mapping/processing/${SAMPLES}*sorted.counts.txt \
+                      ${FINAL_DIR}/analysis/mapping/processing/
+    rsync -azv --no-r ${WORKING_DIR}/analysis/mapping/processing/${SAMPLES}*stats \
+                      ${FINAL_DIR}/analysis/mapping/processing/
+
+    # Copy the scripts
+    rsync -azv --no-r ${WORKING_DIR}/scripts/ ${FINAL_DIR}/scripts/
 
     # If DIAMOND database files had to be downloaded, copy those to a permanent directory too
     if [[ ! -z "${NEW_DIAMOND_DB}" ]]; then
