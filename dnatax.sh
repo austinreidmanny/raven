@@ -83,11 +83,11 @@ function usage() {
                 l ) # Take in the library type ('paired' or 'single')
                     LIB_TYPE=${OPTARG}
                     if [[ ${LIB_TYPE} == "paired" ]]; then
-                        PAIRED=1; SINGLE=0;
+                        LIB_TYPE="paired"
                     elif [[ ${LIB_TYPE} == "single" ]]; then
-                        PAIRED=0; SINGLE=1
+                        LIB_TYPE="single"
                     else
-                        echo "ERROR: Library type must be 'paired' or 'single'. Exiting" >&2
+                        echo "ERROR: Library type must be 'paired' or 'single'. Exiting with error 3..." >&2
                         exit 3;
                     fi;
                     ;;
@@ -96,7 +96,7 @@ function usage() {
                     MEMORY_ENTERED=${OPTARG}
                     MEMORY_TO_USE=$(echo $MEMORY_ENTERED | sed 's/[^0-9]*//g')
                     ;;
-               
+
                 n ) # set max number of CPUs/processors/cores to use
                     NUM_THREADS=${OPTARG}
                     ;;
@@ -257,6 +257,49 @@ function usage() {
     echo "Setup complete"
 #==================================================================================================#
 
+function determine_library_type() {
+    #==============================================================================================#
+    # If no library type is given by user, determine if single reads or paired-end reads by looking
+    # at file naming scheme; SRA & fasterq-dump give specific naming scheme for paired vs. unpaired
+    #==============================================================================================#
+
+    # Check to make sure library type not provided by user, then set both paired and single to 0;
+    # will read through list of fastq files and count how many are paired vs single-end based on
+    # fasterq-dump's naming scheme
+
+    if [[ -z ${LIB_TYPE} ]]; then
+        PAIRED=0
+        SINGLE=0
+
+        for SAMPLE in ${ALL_SAMPLES[@]}
+            do
+                if [[ -f data/raw-sra/${SAMPLE}.fastq ]]
+                    then let "SINGLE += 1"
+                elif [[ -f data/raw-sra/${SAMPLE}_1.fastq ]] && \
+                     [[ -f data/raw-sra/${SAMPLE}_2.fastq ]]
+                     then let "PAIRED += 1"
+                else
+                    echo "ERROR: cannot determine if input libraries are paired-end or" \
+            			     "single-end. Exiting" >&2; exit 2
+                fi
+            done
+
+        ## Paired-end reads mode
+        if [[ ${PAIRED} > 0 ]] && [[ ${SINGLE} = 0 ]];
+            then LIB_TYPE="paired"
+
+        ## Single-end reads mode
+        elif [[ ${SINGLE} > 0 ]] && [[ ${PAIRED} = 0 ]];
+            then LIB_TYPE="single"
+
+        ## Otherwise, error
+        else
+             echo "ERROR: cannot determine if input libraries are paired-end or " \
+                  "single-end. Exiting" >&2; exit 2
+        fi
+    fi
+}
+
 function download_sra() {
     #==============================================================================================#
     # Downloads the transcriptomes from the NCBI Sequence Read Archive (SRA)
@@ -300,26 +343,12 @@ function download_sra() {
     # Reset the error checking
     set -eo pipefail
 
-    # If no library type is given by user, determine if single reads or paired-end reads by looking
-    # at file naming scheme; SRA & fasterq-dump give specific naming scheme for paired vs. unpaired
-    if [[ -z ${PAIRED} ]] || [[ -z ${SINGLE} ]] ; then
-        export PAIRED=0
-        export SINGLE=0
+    # Determine the library type of the downloaded reads (paired or unpaired reads)
+    determine_library_type
 
-        for SAMPLE in ${ALL_SAMPLES[@]}
-           do if [[ -f data/raw-sra/${SAMPLE}.fastq ]]
-              then let "SINGLE += 1"
-           elif [[ -f data/raw-sra/${SAMPLE}_1.fastq ]] && \
-                [[ -f data/raw-sra/${SAMPLE}_2.fastq ]]
-              then let "PAIRED += 1"
-           else
-              echo "ERROR: cannot determine if input libraries are paired-end or" \
-        			     "single-end. Exiting" >&2
-              exit 2
-           fi; done
-   fi
-
-   echo "finished downloading SRA files"
+    # Notify user that the reads have finished Downloading
+   echo "finished downloading SRA files at:    $(date)" | \
+       tee -a analysis/timelogs/${SAMPLES}.log
 }
 
 function adapter_trimming() {
@@ -345,29 +374,32 @@ function adapter_trimming() {
     #==============================================================================================#
     # Run TrimGalore! in paired or single end mode, depending on input library type
     #==============================================================================================#
+    # Check to make sure library type has been set or determined
+    if [[ -z "${LIB_TYPE}" ]]; then
+        determine_library_type
+    fi
+
     ## Paired-end mode
-    if [[ ${PAIRED} > 0 ]] && \
-       [[ ${SINGLE} = 0 ]]
-       then for SAMPLE in ${ALL_SAMPLES[@]}
-                do trim_galore \
-                   --paired \
-                   --stringency 5 \
-                   --quality 1 \
-                   -o data/fastq-adapter-trimmed \
-                   data/raw-sra/${SAMPLE}_1.fastq \
-                   data/raw-sra/${SAMPLE}_2.fastq
-                done
+    if [[ ${LIB_TYPE} == "paired" ]]; then
+        for SAMPLE in ${ALL_SAMPLES[@]}
+            do trim_galore \
+               --paired \
+               --stringency 5 \
+               --quality 1 \
+               -o data/fastq-adapter-trimmed \
+               data/raw-sra/${SAMPLE}_1.fastq \
+               data/raw-sra/${SAMPLE}_2.fastq
+            done
 
     ## Single/unpaired-end mode
-    elif [[ ${SINGLE} > 0 ]] && \
-         [[ ${PAIRED} = 0 ]]
-         then for SAMPLE in ${ALL_SAMPLES[@]}
-                   do trim_galore \
-                      --stringency 5 \
-                      --quality 1 \
-                      -o data/fastq-adapter-trimmed \
-                      data/raw-sra/${SAMPLE}.fastq
-                   done
+    elif [[ ${LIB_TYPE} == "single" ]]; then
+        for SAMPLE in ${ALL_SAMPLES[@]}
+           do trim_galore \
+              --stringency 5 \
+              --quality 1 \
+              -o data/fastq-adapter-trimmed \
+              data/raw-sra/${SAMPLE}.fastq
+           done
 
     ## If cannot determine library type, exit
     else
@@ -418,12 +450,12 @@ function de_novo_assembly() {
     #==============================================================================================#
     # Construct configuration file (YAML format) for input for rnaSPAdes
     #==============================================================================================#
-    if [[ ${PAIRED} > 0 ]] && \
-       [[ ${SINGLE} = 0 ]]
-       then yaml_spades_pairedreads
-    elif [[ ${SINGLE} > 0 ]] && \
-         [[ ${PAIRED} = 0 ]]
-       then yaml_spades_singlereads
+    if [[ ${LIB_TYPE} == "paired" ]]; then
+        yaml_spades_pairedreads
+
+    elif [[ ${LIB_TYPE} == "unpaired" ]]; then
+        yaml_spades_singlereads
+
     else
        echo -e "ERROR: could not build YAML configuration file for rnaSPAdes. \n" \
                "Possibly mixed input libraries: both single & paired end reads" >&2
@@ -443,9 +475,19 @@ function de_novo_assembly() {
     #==============================================================================================#
 
     #==============================================================================================#
+    # Filter out all contigs shorter than 300 nucleotides
+    #==============================================================================================#
+    seqtk seq \
+    -L 300 \
+    ${TEMP_DIR}/transcripts.fasta > \
+    ${TEMP_DIR}/transcripts.filtered.fasta
+    #==============================================================================================#
+
+    #==============================================================================================#
     # Copy the results files from the temp directory to the working directory
     #==============================================================================================#
-    cp ${TEMP_DIR}/transcripts.fasta analysis/contigs/${SAMPLES}.contigs.fasta
+    cp ${TEMP_DIR}/transcripts.filtered.fasta analysis/contigs/${SAMPLES}.contigs.fasta
+    cp ${TEMP_DIR}/transcripts.fasta analysis/contigs/${SAMPLES}.contigs.unfiltered.fasta
     cp ${TEMP_DIR}/transcripts.paths analysis/contigs/${SAMPLES}.contigs.paths
     cp ${TEMP_DIR}/spades.log analysis/contigs/${SAMPLES}.contigs.log
     #==============================================================================================#
@@ -755,6 +797,157 @@ function taxonomy() {
     #==============================================================================================#
 }
 
+function mapping() {
+    #==== FUNCTION ================================================================================#
+    #        NAME: mapping
+    # DESCRIPTION: map initial reads to the de novo assembled contigs and merge that as a new column
+    #              onto the table containing all contigs and their taxonomic assignment
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Preparation
+    #==============================================================================================#
+    # Create mapping directory for saving the results
+    mkdir -p analysis/mapping
+    mkdir -p analysis/mapping/processing
+
+    # Create input and output file names
+    taxonomy_table="analysis/taxonomy/${SAMPLES}.nr.diamond.taxonomy.txt"
+    mapped_table="analysis/mapping/${SAMPLES}.nr.diamond.taxonomy.mapped.txt"
+
+    # Check if paired-end or single-end reads
+    if [[ -z ${LIB_TYPE} ]]; then
+        determine_library_type
+    fi
+
+    # Make sure BWA was installed correctly
+    command -v bwa > /dev/null || \
+    {   echo -e "ERROR: This script requires the tool 'bwa' but could not found. \n" \
+            "Please rerun the setup scirpt or install this application manually. \n" \
+            "Exiting with error code 7..." >&2; exit 7
+        }
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Index the reference and map the reads
+    #==============================================================================================#
+    # Build BWA index out of the reference
+    bwa index \
+    -p analysis/mapping/processing/bwa-index_${SAMPLES} \
+    analysis/contigs/${SAMPLES}.contigs.fasta
+
+    # Perform the mapping
+
+    ## paired-end input reads
+    if  [[ ${LIB_TYPE} == "paired" ]]; then
+
+        bwa mem \
+        -t ${NUM_THREADS} \
+        analysis/mapping/processing/bwa-index_${SAMPLES} \
+        <(cat data/fastq-adapter-trimmed/*_1_val_1.fq) \
+        <(cat data/fastq-adapter-trimmed/*_2_val_2.fq) > \
+        analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam
+
+    ## unpaired input reads
+    elif [[ ${LIB_TYPE} == "single" ]]; then
+
+         bwa mem \
+         -t ${NUM_THREADS} \
+         analysis/mapping/processing/bwa-index_${SAMPLES} \
+         <(cat data/fastq-adapter-trimmed/*trimmed.fq) > \
+         analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam
+
+    else
+       echo -e "ERROR: Could not map reads to contigs. \n" \
+               "Possibly mixed input libraries: both single & paired end reads. \n" \
+               "Exiting with error 8..." >&2
+       exit 8
+    fi
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Get summary statistics of the mapping
+    #==============================================================================================#
+    samtools flagstat  \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.stats
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Remove unmapped reads
+    #==============================================================================================#
+    samtools view \
+    -F 4 -bh \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Sort the reads
+    #==============================================================================================#
+    samtools sort \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Get per-contig read counts
+    #==============================================================================================#
+        # output format (tab-delimited):
+        # contig_name    contig_length    number_mapped_reads    number_unmapped_reads
+
+    samtools idxstats \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp
+
+    # Drop the column with "number unmapped reads" because its always zero
+    cut -f1,2,3 \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
+
+    # Get rid of last line because it's just unmapped reads, which we already have from samtools flagstat
+    head -n -1 \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt > \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt.trimmed
+
+    # Remove temporary file
+    mv analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt.trimmed \
+    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
+
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Save results as a tab-delimited table
+    #==============================================================================================#
+
+      #============================================================================================#
+      # similar to the taxonomy table, but with per-contig length & read counts as final 2 columns;
+      # make sure they are both input files are sorted on the contigs so it merges properly
+      #
+      # However, the names of the contigs are NODE_####, which is difficult for 'sort' to parse;
+      # I cannot get it to sort NODE_1_ before NODE_101_, perhaps b/c of the mixed letters+numbers;
+      # So at the end, I will re-sort the table by contig length (longest first) -- the original order
+      #
+      # The final step is to calculate a normalized coverage value per contig. This will just be the 
+      # number of mapped reads to the contig divided by its length (column 13/column 12)
+      #============================================================================================#
+
+    join \
+    -t $'\t' \
+    <(sort -k1,1n ${taxonomy_table}) \
+    <(sort -k1,1n analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt) | \
+    sort -rnk12,12 - > \
+    ${mapped_table}.temp
+
+    # Determine coverage values by dividing the number of reads by the length of the contig
+    awk '{print $0"\t"($13/$12)}' ${mapped_table}.temp > ${mapped_table}
+
+    # Remove temporary file
+    rm ${mapped_table}.temp
+    #==============================================================================================#
+
+}
+
 function extract_viral() {
     #==============================================================================================#
     # This function will extract the viral sequences, save their taxonomy info to
@@ -824,16 +1017,29 @@ function cleanup() {
     #==============================================================================================#
     # Copy results to final, permanent directory
     #==============================================================================================#
+    # Make necessary subdirectories in final directory
     mkdir -p ${FINAL_DIR}/analysis
     mkdir -p ${FINAL_DIR}/scripts
 
+    # Copy most of the analysis files
     rsync -azv ${WORKING_DIR}/analysis/contigs/${SAMPLES}* ${FINAL_DIR}/analysis/contigs/
     rsync -azv ${WORKING_DIR}/analysis/diamond/${SAMPLES}* ${FINAL_DIR}/analysis/diamond/
     rsync -azv ${WORKING_DIR}/analysis/taxonomy/${SAMPLES}* ${FINAL_DIR}/analysis/taxonomy/
     rsync -azv ${WORKING_DIR}/analysis/timelogs/${SAMPLES}* ${FINAL_DIR}/analysis/timelogs/
     rsync -azv ${WORKING_DIR}/analysis/viruses/${SAMPLES}* ${FINAL_DIR}/analysis/viruses/
 
-    rsync -azv ${WORKING_DIR}/scripts/ ${FINAL_DIR}/scripts
+    # Copy the mapping files (a little more complicated so they get their own block)
+    rsync -azv --no-r ${WORKING_DIR}/analysis/mapping/${SAMPLES}* \
+                      ${FINAL_DIR}/analysis/mapping/
+    rsync -azv --no-r ${WORKING_DIR}/analysis/mapping/processing/${SAMPLES}*sorted.bam \
+                      ${FINAL_DIR}/analysis/mapping/processing/
+    rsync -azv --no-r ${WORKING_DIR}/analysis/mapping/processing/${SAMPLES}*sorted.counts.txt \
+                      ${FINAL_DIR}/analysis/mapping/processing/
+    rsync -azv --no-r ${WORKING_DIR}/analysis/mapping/processing/${SAMPLES}*stats \
+                      ${FINAL_DIR}/analysis/mapping/processing/
+
+    # Copy the scripts
+    rsync -azv --no-r ${WORKING_DIR}/scripts/ ${FINAL_DIR}/scripts/
 
     # If DIAMOND database files had to be downloaded, copy those to a permanent directory too
     if [[ ! -z "${NEW_DIAMOND_DB}" ]]; then
@@ -876,10 +1082,12 @@ function cleanup() {
 # Run the pipeline
 #==================================================================================================#
 download_sra
+determine_library_type
 adapter_trimming
 de_novo_assembly
 classification
 taxonomy
+mapping
 extract_viral
 cleanup
 #==================================================================================================#
