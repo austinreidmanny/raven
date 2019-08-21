@@ -869,25 +869,23 @@ function mapping() {
     # Get summary statistics of the mapping
     #==============================================================================================#
     samtools flagstat  \
+    --threads $(expr ${NUM_THREADS}-1) \
     analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam > \
     analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.stats
     #==============================================================================================#
 
     #==============================================================================================#
-    # Remove unmapped reads
+    # Remove unmapped reads, sort the reads, and save it as a sorted+compressed bam file
     #==============================================================================================#
     samtools view \
-    -F 4 -bh \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam > \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam
-    #==============================================================================================#
+        --threads $(expr ${NUM_THREADS}-1) \
+        -F 4 -bh \
+        analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam |
+    samtools sort --threads $(expr ${NUM_THREADS}-1) > \
+        analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam
 
-    #==============================================================================================#
-    # Sort the reads
-    #==============================================================================================#
-    samtools sort \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.bam > \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam
+    # Delete the uncompressed sam file
+    rm analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.sam
     #==============================================================================================#
 
     #==============================================================================================#
@@ -896,24 +894,14 @@ function mapping() {
         # output format (tab-delimited):
         # contig_name    contig_length    number_mapped_reads    number_unmapped_reads
 
+    # Retrieve the statistics; drop the last column b/c it's uninformative; and get rid of the last
+    # line because it's just unmapped reads, which we already have from samtools flagstat
     samtools idxstats \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam > \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp
-
-    # Drop the column with "number unmapped reads" because its always zero
-    cut -f1,2,3 \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.temp > \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
-
-    # Get rid of last line because it's just unmapped reads, which we already have from samtools flagstat
-    head -n -1 \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt > \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt.trimmed
-
-    # Remove temporary file
-    mv analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt.trimmed \
-    analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
-
+        --threads $(expr ${NUM_THREADS}-1) \
+        analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam |
+    cut -f1,2,3 |
+    head -n -1 > \
+        analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt
     #==============================================================================================#
 
     #==============================================================================================#
@@ -932,29 +920,31 @@ function mapping() {
       # number of mapped reads to the contig divided by its length (column 13/column 12)
       #============================================================================================#
 
+    # Merge the taxonomy table and the counts reads table; save as a temporary table
     join \
-    -t $'\t' \
-    <(sort -k1,1n ${taxonomy_table}) \
-    <(sort -k1,1n analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt) | \
-    sort -rnk12,12 - > \
-    ${mapped_table}.temp
+        -t $'\t' \
+        <(sort -k1,1n ${taxonomy_table}) \
+        <(sort -k1,1n analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.counts.txt) | \
+        sort -rnk12,12 - > \
+        "${mapped_table}.temp"
 
     # Calculate average read length of mapped reads by looking at first million reads
     average_read_length=$(samtools view \
-        analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam |
-        head -n 1000000 |
+        analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam | \
+        head -n 1000000 | \
         awk '{ sumOfReadLengths += length($10); numReads++ } END \
              { print int(sumOfReadLengths / numReads) }')
 
     # Determine per-contig coverage values by: (number_mapped_reads * read_length) / (contig_length)
+    # and append this as the final column on the permanent final mapped table
     awk \
         -v avg_read_len="${average_read_length}" \
         '{ print $0"\t"(($13 * avg_read_len)/$12) }' \
-        ${mapped_table}.temp > \
+        "${mapped_table}.temp" > \
         ${mapped_table}
 
     # Remove temporary file
-    rm ${mapped_table}.temp
+    rm "${mapped_table}.temp"
     #==============================================================================================#
 
 }
