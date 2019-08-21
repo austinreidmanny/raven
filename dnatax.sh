@@ -939,12 +939,11 @@ function mapping() {
     sort -rnk12,12 - > \
     ${mapped_table}.temp
 
-    # Calculate average read length of all mapped reads
+    # Calculate average read length of mapped reads by looking at first million reads
     average_read_length=$(samtools view \
         analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam |
-        head -n 1000 |
-        awk '{ sumOfReadLengths += length($10); numReads++ }
-             END
+        head -n 1000000 |
+        awk '{ sumOfReadLengths += length($10); numReads++ } END \
              { print int(sumOfReadLengths / numReads) }')
 
     # Determine per-contig coverage values by: (number_mapped_reads * read_length) / (contig_length)
