@@ -928,7 +928,7 @@ function mapping() {
       # I cannot get it to sort NODE_1_ before NODE_101_, perhaps b/c of the mixed letters+numbers;
       # So at the end, I will re-sort the table by contig length (longest first) -- the original order
       #
-      # The final step is to calculate a normalized coverage value per contig. This will just be the 
+      # The final step is to calculate a normalized coverage value per contig. This will just be the
       # number of mapped reads to the contig divided by its length (column 13/column 12)
       #============================================================================================#
 
@@ -939,8 +939,20 @@ function mapping() {
     sort -rnk12,12 - > \
     ${mapped_table}.temp
 
-    # Determine coverage values by dividing the number of reads by the length of the contig
-    awk '{print $0"\t"($13/$12)}' ${mapped_table}.temp > ${mapped_table}
+    # Calculate average read length of all mapped reads
+    average_read_length=$(samtools view \
+        analysis/mapping/processing/${SAMPLES}.mapped_reads_to_contigs.no_unmapped_reads.sorted.bam |
+        head -n 1000 |
+        awk '{ sumOfReadLengths += length($10); numReads++ }
+             END
+             { print int(sumOfReadLengths / numReads) }')
+
+    # Determine per-contig coverage values by: (number_mapped_reads * read_length) / (contig_length)
+    awk \
+        -v avg_read_len="${average_read_length}" \
+        '{ print $0"\t"(($13 * avg_read_len)/$12) }' \
+        ${mapped_table}.temp > \
+        ${mapped_table}
 
     # Remove temporary file
     rm ${mapped_table}.temp
