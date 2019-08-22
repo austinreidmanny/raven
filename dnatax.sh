@@ -826,6 +826,11 @@ function mapping() {
             "Please rerun the setup scirpt or install this application manually. \n" \
             "Exiting with error code 7..." >&2; exit 7
         }
+
+    # Logging time of the mapping stage
+    echo -e "Mapping reads to contigs, and constructing a final table with \n" \
+            "contig names, taxonomic assignments, and coverage values at. Beginning at: \n" \
+            "$(date)" | tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
     #==============================================================================================#
@@ -908,17 +913,31 @@ function mapping() {
     # Save results as a tab-delimited table
     #==============================================================================================#
 
-      #============================================================================================#
-      # similar to the taxonomy table, but with per-contig length & read counts as final 2 columns;
-      # make sure they are both input files are sorted on the contigs so it merges properly
-      #
-      # However, the names of the contigs are NODE_####, which is difficult for 'sort' to parse;
-      # I cannot get it to sort NODE_1_ before NODE_101_, perhaps b/c of the mixed letters+numbers;
-      # So at the end, I will re-sort the table by contig length (longest first) -- the original order
-      #
-      # The final step is to calculate a normalized coverage value per contig. This will just be the
-      # number of mapped reads to the contig divided by its length (column 13/column 12)
-      #============================================================================================#
+    #============================================================================================#
+    # similar to the taxonomy table, but with per-contig length & read counts as final 2 columns;
+    # make sure they are both input files are sorted on the contigs so it merges properly
+    #
+    # However, the names of the contigs are NODE_####, which is difficult for 'sort' to parse;
+    # I cannot get it to sort NODE_1_ before NODE_101_, perhaps b/c of the mixed letters+numbers;
+    # So at the end, I will re-sort the table by contig length (longest first) -- the original order
+    #
+    # The final step is to calculate a normalized coverage value per contig, as such:
+    # (number_mapped_reads * read_length) / (contig_length)
+    #============================================================================================#
+
+    #==========================================================================================#
+    # Temporarily disabling 'set -eo pipefail' protections
+    #==========================================================================================#
+    # Samtools does not play well with 'head';
+    # 'head' sends a SIGPIPE stop pipe signal to Samtools to limit its output to 'n' number of lines;
+    # but samtools ignores that, which 'head' does not like, so it does its job but exits with an error 141;
+    # So I have to temporarily turn off error protection that normally protects against these kinds of errors
+    # It does not appear to impact the results, and it is a somewhat common occurance
+    # see a similar report on the official samtools issues website @
+    # https://sourceforge.net/p/samtools/mailman/message/33035179/
+    #
+    set +eo pipefail
+    #==========================================================================================#
 
     # Merge the taxonomy table and the counts reads table; save as a temporary table
     join \
@@ -935,16 +954,50 @@ function mapping() {
         awk '{ sumOfReadLengths += length($10); numReads++ } END \
              { print int(sumOfReadLengths / numReads) }')
 
-    # Determine per-contig coverage values by: (number_mapped_reads * read_length) / (contig_length)
-    # and append this as the final column on the permanent final mapped table
+    # Make a header for the final table
+    echo -e "Contig_name\t" \
+            "Taxon_ID\t" \
+            "e-value\t" \
+            "Superkingdom\t" \
+            "Kingdom\t" \
+            "Phylum\t" \
+            "Class\t" \
+            "Order\t" \
+            "Family\t" \
+            "Genus\t" \
+            "Species\t" \
+            "Contig_length\t" \
+            "Mapped_reads\t" \
+            "Coverage_value" > ${mapped_table}
+
+    # Determine the per-contig coverage values, and
+    # append this as the final column on the permanent final mapped table
     awk \
         -v avg_read_len="${average_read_length}" \
         '{ print $0"\t"(($13 * avg_read_len)/$12) }' \
-        "${mapped_table}.temp" > \
+        "${mapped_table}.temp" >> \
         ${mapped_table}
 
     # Remove temporary file
     rm "${mapped_table}.temp"
+
+    # Re-enable error-checking protection
+    set -eo pipefail
+    #==============================================================================================#
+
+    #==============================================================================================#
+    # Logging info for the mapping stage
+    #==============================================================================================#
+    # Note on the coverage value calculation
+    echo -e "Note on the 'coverage_value' determination in the final mapped table: \n" \
+            "Coverage values were calculated as such: \n\n" \
+            "    (number_mapped_reads * read_length) / contig_length \n\n" \
+            "This value reflects the average coverage per nucleotide across the contig. \n" |
+            tee -a analysis/timelogs/${SAMPLES}.log
+
+    # Log completion time
+    echo -e "Finished mapping stage at: \n" \
+            "$(date)" | tee -a analysis/timelogs/${SAMPLES}.log
     #==============================================================================================#
 
 }
