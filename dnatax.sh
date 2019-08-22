@@ -3,14 +3,12 @@
 #==================================================================================================#
 # DNAtax
 #==================================================================================================#
-# This pipeline is be the driver script for DNAtax using the SLURM jobs manager
-# Run this interactively by providing -p PROJECT & -s SRA-accs (full usage below)
-#
-# Full DNAtax pipeline downloads FASTQs from the NCBI-SRA, trims adapters,
+# DNAtax: this pipeline downloads FASTQs from the NCBI-SRA, trims adapters,
 # performs de novo contig assembly, determines the taxonomic origin of
 # each sequence, translates these calls from NCBI TaxonIDs to full taxonomic
-# lineages, extracts the viral sequences and saves them to its own FASTA file,
-# and saves the results to a final permanent directory and cleans up.
+# lineages, maps reads back to the contigs to generate coverage values,
+# bins the viral sequences and saves them to its own FASTA file,
+# saves the results to a final permanent directory and cleans up.
 #==================================================================================================#
 
 #==================================================================================================#
