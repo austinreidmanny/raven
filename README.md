@@ -1,6 +1,7 @@
 # Raven
-An RNA virus discovery pipeline (formerly `dnatax`)
-Like the bird, `Raven` is smart and good at finding things (like viruses). Unlike the bird, this pipeline has not been cited by Edgar Allen Poe
+An RNA virus discovery pipeline (formerly `dnatax`).
+
+Like the bird, `Raven` is smart and good at finding things (like viruses). Unlike the bird, this pipeline has not been cited by Edgar Allen Poe.
 
 ## Objective
 `Raven` is a virus discovery pipeline for finding viruses in publicly available transcriptome data.

@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #==============================================================================#
-# DNAtax setup
+# Raven setup
 #==============================================================================#
 # Objective: The purpose of this script is to set up the computational         #
-#            environment in a reproducibile and robust way. As DNAtax relies   #
+#            environment in a reproducibile and robust way. As Raven relies    #
 #            upon a multitude of software from various authors and channels,   #
 #            any discrepancies can lead to software breaking or giving         #
 #            conflicting results. This setup.sh script aims to prevent that.   #
@@ -35,11 +35,11 @@ function install_conda() {
             "PLEASE RERUN THIS SCRIPT... \n\n"
 
     # Launch a new subshell (which will load conda); when user relaunches the script, it will
-    # continue to the setup_dnatax function and finish setup
+    # continue to the 'setup_raven' function and finish setup
     exec bash -l
     }
 
-function setup_dnatax() {
+function setup_raven() {
     # Test to make sure that conda is installed correctly
     conda list > /dev/null || \
     {  echo "Conda was not set up correctly. Please retry or manually install Miniconda."
@@ -51,8 +51,8 @@ function setup_dnatax() {
     conda config --add channels bioconda
     conda config --add channels conda-forge
 
-    # Setup a new environment where all the software needed for dnatax will be installed
-    conda create --name env_dnatax \
+    # Setup a new environment where all the software needed for Raven will be installed
+    conda create --name env_raven \
     seqtk=1.3 \
     sra-tools=2.9.1_1 \
     spades=3.13.1 \
@@ -66,10 +66,10 @@ function setup_dnatax() {
 
     # Tell the user that the setup has completed!
     echo -e "All necessary software as been successfully installed! \n" \
-            "The DNAtax pipeline is now ready to run."
+            "The Raven pipeline is now ready to run."
     exit 0
     }
 
 # If the conda package manager is installed, run the setup; otherwise, install conda first
 conda -V 2&> /dev/null || install_conda
-setup_dnatax
+setup_raven

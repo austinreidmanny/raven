@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #==================================================================================================#
-# DNAtax
+# Raven
 #==================================================================================================#
-# DNAtax: this pipeline downloads FASTQs from the NCBI-SRA, trims adapters,
+# Raven: this pipeline downloads FASTQs from the NCBI-SRA, trims adapters,
 # performs de novo contig assembly, determines the taxonomic origin of
 # each sequence, translates these calls from NCBI TaxonIDs to full taxonomic
 # lineages, maps reads back to the contigs to generate coverage values,
@@ -17,17 +17,17 @@
 # Stop program if it any component fails
 set -eo pipefail
 
-# Welcome user to DNAtax
+# Welcome user to Raven
 echo -e "\n ================================================================================\n" \
-           "Welcome to DNAtax! \n" \
+           "Welcome to Raven! \n" \
            "================================================================================\n" \
-           "Full source code & contact info available at github.com/austinreidmanny/dnatax  \n" \
+           "Full source code & contact info available at github.com/austinreidmanny/raven  \n" \
            "================================================================================\n"
 
 # Load environment containing all necessary software (prepared by the setup.sh script); if error, exit
 eval "$(conda shell.bash hook)"
-conda activate env_dnatax > /dev/null || {
-   echo -e "Could not activate the conda environment for dnatax." \
+conda activate env_raven > /dev/null || {
+   echo -e "Could not activate the conda environment for Raven." \
            "Please fully run the setup.sh script, restart terminal, and try again."
    exit 10
    }
@@ -51,14 +51,14 @@ function usage() {
         "-w (set the working directory, where all analysis will take place; [default=current directory, \n" \
             "but a scratch directory with a lot of storage is recommended]) \n" \
         "-f (set the final directory, where all the files will be copied to the end [default=current directory]) \n" \
-        "-t (set the temporary directory, where the pipeline will dump all temp files [default='/tmp/dnatax/'] \n" \
+        "-t (set the temporary directory, where the pipeline will dump all temp files [default='/tmp/raven/'] \n" \
         "-h (set the home directory where DNAtax is located; [default=current directory, is recommended not to change]) \n" \
         "-d (specify the full path to the DIAMOND database, including the db name - e.g., '/path/to/nr-database/nr' \n" \
             "[default=none, will download all files to temp space and copy them to final directory at the end; NOTE: \n" \
             "DNAtax requires a DIAMOND database, NCBI taxonmaps file, and NCBI protein2accessions file; \n" \
             "These all must be located in the same directory as the DIAMOND database \n\n" \
     "Example of a complex run: \n" \
-    "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30 -w external_drive/storage/ -f projects/dnatax/final/ -t /tmp/ -d tools/diamond/nr \n\n" \
+    "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30 -w external_drive/storage/ -f projects/raven/final/ -t /tmp/ -d tools/diamond/nr \n\n" \
     "Exiting program. Please retry with corrected parameters..." >&2; exit 1;
     }
 
@@ -111,7 +111,7 @@ function usage() {
                     TEMP_DIR=${OPTARG}
                     ;;
 
-                h ) # set home directory, where dnatax code is located; recommandation: don't change
+                h ) # set home directory, where raven code is located; recommandation: don't change
                     HOME_DIR=${OPTARG}
                     ;;
 
@@ -156,15 +156,15 @@ function usage() {
     fi
 
     if [[ -z "${WORKING_DIR}" ]] ; then
-        WORKING_DIR="./dnatax/"
+        WORKING_DIR="./raven/"
     fi
 
     if [[ -z "${FINAL_DIR}" ]] ; then
-        FINAL_DIR="./dnatax/"
+        FINAL_DIR="./raven/"
     fi
 
     if [[ -z "${TEMP_DIR}" ]] ; then
-        TEMP_DIR="/tmp/dnatax/${SAMPLES}"
+        TEMP_DIR="/tmp/raven/${SAMPLES}"
     fi
 
     #==============================================================================================#
@@ -203,7 +203,7 @@ function usage() {
 #==================================================================================================#
 
     #   project-name/
-    #    |_ dnatax/
+    #    |_ raven/
     #        |_ data/
     #        |_ analysis/
     #        |_ scripts/
@@ -235,7 +235,7 @@ function usage() {
     # Setup scripts subdirecotry
     mkdir -p scripts
 
-    # Copy dnatax pipeline & the key taxonomy script from HOME to WORKING dir
+    # Copy Raven pipeline & the key taxonomy script from HOME to WORKING dir
     if [[ -f ${HOME_DIR}/diamondToTaxonomy.py ]]
       then echo "All neccessary scripts are available to copy. COPYING...";
       cp ${HOME_DIR}/diamondToTaxonomy.py scripts/
@@ -246,7 +246,7 @@ function usage() {
     else
       echo -e "One or more of the following scripts are missing: \n" \
               "diamondToTaxonomy.py, $0" >&2
-      echo "Please download this from github.com/austinreidmanny/dnatax" >&2
+      echo "Please download this from github.com/austinreidmanny/raven" >&2
       echo "ERROR: Cannot find mandatory helper scripts. Exiting" >&2
       exit 1
     fi
@@ -1096,7 +1096,7 @@ function cleanup() {
     # If DIAMOND database files had to be downloaded, copy those to a permanent directory too
     if [[ ! -z "${NEW_DIAMOND_DB}" ]]; then
         echo -e "Copying DIAMOND database & taxonomy files to permanent storage at ${FINAL_DIR}/scripts/diamond_db \n" \
-                "Next time you run dnatax, you may use these files with the flag '-d ${FINAL_DIR}/scripts/diamond_db/nr'"
+                "Next time you run Raven, you may use these files with the flag '-d ${FINAL_DIR}/scripts/diamond_db/nr'"
         mkdir -p ${FINAL_DIR}/scripts/diamond_db/
         rsync -azv ${TEMP_DIR}/diamond_db/ ${FINAL_DIR}/scripts/diamond_db
     fi
@@ -1123,7 +1123,7 @@ function cleanup() {
 
     #==============================================================================================#
     # Tell user that the pipeline has finished successfully and where to find the final files
-    echo -e "dnatax pipeline finished successfully at $(date) \n" \
+    echo -e "Raven pipeline finished successfully at $(date) \n" \
             "Final files are located at ${FINAL_DIR} \n\n" \
             "Have a fantastic day!" | \
     tee -a analysis/timelogs/${SAMPLES}.log
