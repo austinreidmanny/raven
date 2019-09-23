@@ -52,10 +52,10 @@ function usage() {
             "but a scratch directory with a lot of storage is recommended]) \n" \
         "-f (set the final directory, where all the files will be copied to the end [default=current directory]) \n" \
         "-t (set the temporary directory, where the pipeline will dump all temp files [default='/tmp/raven/'] \n" \
-        "-h (set the home directory where DNAtax is located; [default=current directory, is recommended not to change]) \n" \
+        "-h (set the home directory where Raven is located; [default=current directory, is recommended not to change]) \n" \
         "-d (specify the full path to the DIAMOND database, including the db name - e.g., '/path/to/nr-database/nr' \n" \
             "[default=none, will download all files to temp space and copy them to final directory at the end; NOTE: \n" \
-            "DNAtax requires a DIAMOND database, NCBI taxonmaps file, and NCBI protein2accessions file; \n" \
+            "Raven requires a DIAMOND database, NCBI taxonmaps file, and NCBI protein2accessions file; \n" \
             "These all must be located in the same directory as the DIAMOND database \n\n" \
     "Example of a complex run: \n" \
     "$0 -p trichomonas -s SRR1001,SRR10002 -l paired -m 30 -w external_drive/storage/ -f projects/raven/final/ -t /tmp/ -d tools/diamond/nr \n\n" \
